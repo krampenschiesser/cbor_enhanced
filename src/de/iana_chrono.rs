@@ -1,8 +1,9 @@
+use chrono::{DateTime, FixedOffset, Offset, Timelike, TimeZone, Utc};
+use nom::number::complete::be_u8;
+
 use crate::de::{Deserializer, Remaining};
 use crate::error::CborError;
-use crate::types::{IanaTag, Type, Special};
-use chrono::{DateTime, Utc, FixedOffset, TimeZone, Offset, Timelike};
-use nom::number::complete::be_u8;
+use crate::types::{IanaTag, Type};
 
 impl<'de> Deserializer {
     pub fn take_timestamp(&self, data: &'de [u8]) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
@@ -17,7 +18,7 @@ impl<'de> Deserializer {
 
     fn take_date_time_string(&self, data: &'de [u8]) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
         let (string, remaining) = self.take_text(data, true)?;
-        let date_time = DateTime::parse_from_rfc3339(string.as_ref()).map_err(|e| CborError::DateTimeParsingFailed(string.to_string()))?;
+        let date_time = DateTime::parse_from_rfc3339(string.as_ref()).map_err(|_| CborError::DateTimeParsingFailed(string.to_string()))?;
         Ok((date_time, remaining))
     }
     fn take_epoch_based_time(&self, data: &'de [u8]) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
@@ -35,7 +36,7 @@ impl<'de> Deserializer {
                 let fix_offset = time.timezone().fix();
                 Ok((time.with_timezone(&fix_offset), remaining))
             }
-            Type::Special(special) => {
+            Type::Special(_) => {
                 let (float, remaining) = self.take_float(data, true)?;
                 let seconds = float.trunc() as i64;
                 let nanos = (float.fract() * 1000_000_000f64).trunc() as u32;
@@ -54,13 +55,8 @@ impl<'de> Deserializer {
         let mut time: Option<DateTime<FixedOffset>> = None;
         let mut precision_ns = 0;
         let mut precision_level = 0;
-        for i in 0..length {
-            let (ret, key) = be_u8(remaining)?;
-
-            let normal_time = 0x01u8;
-            let millis = 0x22u8;
-            let micros = 0x25u8;
-            let nano = 0x28u8;
+        for _ in 0..length {
+            let (_, key) = be_u8(remaining)?;
 
             match key {
                 //normal time as in tag 1
@@ -103,7 +99,7 @@ impl<'de> Deserializer {
             }
         }
         if let Some(mut time) = time {
-            if (precision_level > 0) {
+            if precision_level > 0 {
                 time = time.with_nanosecond(precision_ns as u32).ok_or(CborError::Unknown("Could not convert time for tag 1001"))?;
             }
             Ok((time, remaining))

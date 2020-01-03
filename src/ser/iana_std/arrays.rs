@@ -1,13 +1,12 @@
-use crate::ser::Serializer;
-use half::f16;
-use crate::types::IanaTag;
 use bytes::BufMut;
 
+use crate::ser::Serializer;
+use crate::types::IanaTag;
 
 impl Serializer {
     fn start_array(&mut self, length: usize, factor: usize, tag: IanaTag) {
         self.write_tag(tag);
-        let size = (length * factor);
+        let size = length * factor;
         self.write_u64_internal(size as u64, 0b0100_0000);
         self.bytes.reserve(size);
     }

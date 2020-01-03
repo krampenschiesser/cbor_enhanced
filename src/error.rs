@@ -1,5 +1,6 @@
-use crate::types::{Special, Type, IanaTag};
 use failure::_core::str::Utf8Error;
+
+use crate::types::{IanaTag, Special, Type};
 
 #[derive(Debug, failure::Fail, Clone)]
 pub enum CborError {
@@ -80,7 +81,7 @@ impl nom::error::ParseError<&[u8]> for CborError {
         CborError::NomParseError(input.to_vec(), kind)
     }
 
-    fn append(input: &[u8], kind: nom::error::ErrorKind, other: Self) -> Self {
+    fn append(input: &[u8], kind: nom::error::ErrorKind, _other: Self) -> Self {
         CborError::NomParseError(input.to_vec(), kind)
     }
 }

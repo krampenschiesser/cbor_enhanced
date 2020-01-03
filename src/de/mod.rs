@@ -1,13 +1,16 @@
-use crate::value::Value;
-use crate::error::CborError;
 use std::fmt::Debug;
-use nom::bytes::complete::{take, tag, take_until, take_till};
-use nom::number::complete::{be_u8, be_u32, be_f32, be_f64, be_u16};
-use crate::types::{Type, Special, IanaTag};
-use std::borrow::Cow;
+
 #[cfg(feature = "iana_numbers")]
 use half::f16;
+use nom::bytes::complete::{take};
+use nom::number::complete::{be_f32, be_f64, be_u8};
+#[cfg(feature = "iana_numbers")]
+use nom::number::complete::{be_u16};
+
+use crate::error::CborError;
 use crate::ReducedSpecial;
+use crate::types::{IanaTag, Special, Type};
+use crate::value::Value;
 
 #[cfg(feature = "iana_numbers")]
 mod iana_numbers;
@@ -26,8 +29,10 @@ mod iana_mime;
 #[cfg(feature = "iana_geo")]
 pub mod iana_geo;
 
+#[allow(dead_code)]
 #[cfg(target_endian = "little")]
 const IS_BIG_ENDIAN: bool = false;
+#[allow(dead_code)]
 #[cfg(target_endian = "big")]
 const IS_BIG_ENDIAN: bool = true;
 
@@ -229,6 +234,7 @@ impl<'de> Deserializer {
         }?;
         Ok((IanaTag::from_tag(o), data))
     }
+    #[allow(dead_code)]
     fn take_n_array<T, F>(&self, data: &'de [u8], tag_values: &'static [IanaTag], multiple: usize, transfomer: F) -> Result<(Vec<T>, Remaining<'de>), CborError>
         where F: Fn(IanaTag, &'de [u8]) -> Result<(T, &'de [u8]), CborError> {
         let (tag, remaining) = self.take_tag(data)?;
@@ -269,7 +275,6 @@ impl<'de> Deserializer {
             return Err(CborError::InvalidArrayMultiple { needed_multiple_of: multiple, got: bytes.len() });
         }
 
-        let total = bytes.len() / multiple;
         let transmuted: &'de [T] = safe_transmute::transmute_many_pedantic::<T>(bytes)?;
         Ok((transmuted, remaining))
     }
@@ -279,7 +284,12 @@ impl<'de> Deserializer {
         match cbor_type {
             Type::Special(s) => {
                 match s {
-                    Special::F64 | Special::F32 | Special::F16 => {
+                    Special::F64 | Special::F32 => {
+                        let (number, remaining) = self.take_float(data, true)?;
+                        Ok((Value::F64(number), remaining))
+                    }
+                    #[cfg(feature = "iana_numbers")]
+                    Special::F16 => {
                         let (number, remaining) = self.take_float(data, true)?;
                         Ok((Value::F64(number), remaining))
                     }
@@ -287,7 +297,6 @@ impl<'de> Deserializer {
                     Special::Break => Ok((Value::Special(ReducedSpecial::Break), remaining)),
                     Special::Null => Ok((Value::Special(ReducedSpecial::Null), remaining)),
                     Special::Undefined => Ok((Value::Special(ReducedSpecial::Undefined), remaining)),
-                    _ => Err(CborError::Unknown("Should never come here as break is part of array/map"))
                 }
             }
             Type::NegativeInteger(_) => {
@@ -316,7 +325,7 @@ impl<'de> Deserializer {
                 let mut to_read = remaining;
                 let mut vec = Vec::with_capacity(length.unwrap_or(10));
                 if let Some(length) = length {
-                    for i in 0..length {
+                    for _ in 0..length {
                         let (value, ret) = self.take_value(to_read)?;
                         vec.push(value);
                         to_read = ret;
@@ -349,7 +358,7 @@ impl<'de> Deserializer {
                 let mut to_read = remaining;
                 let mut vec = Vec::with_capacity(length.unwrap_or(10));
                 if let Some(length) = length {
-                    for i in 0..length {
+                    for _ in 0..length {
                         let (key, ret) = self.take_value(to_read)?;
                         to_read = ret;
                         let (value, ret) = self.take_value(to_read)?;
@@ -405,7 +414,7 @@ impl<'de> Deserialize<'de> for u32 {
 
 impl<'de, T: Deserialize<'de> + Debug> Deserialize<'de> for Vec<T> {
     fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
-        let (mut o, mut remaining) = deserializer.take_array_def(data, true)?;
+        let (o, mut remaining) = deserializer.take_array_def(data, true)?;
         let mut vec = Vec::with_capacity(o.unwrap_or(100));
 
         let mut visited_elemnents = 0;
@@ -427,52 +436,5 @@ impl<'de, T: Deserialize<'de> + Debug> Deserialize<'de> for Vec<T> {
             visited_elemnents += 1;
         }
         Ok((vec, remaining))
-    }
-}
-
-
-#[cfg(test)]
-mod test {
-    use std::borrow::Cow;
-    use crate::de::{Deserializer, Deserialize};
-    use crate::value::Value;
-    use crate::error::CborError;
-
-
-    #[derive(Debug)]
-    pub struct Bla<'a> {
-        data: Cow<'a, [u8]>,
-        name: &'a str,
-        number: u32,
-    }
-
-    impl<'de> Deserialize<'de> for Bla<'de> {
-        fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
-            let (data, remaining) = deserializer.take_bytes(data, true)?;
-            let (name, remaining) = deserializer.take_text(remaining, true)?;
-            let (number, remaining) = deserializer.take_unsigned(remaining, true)?;
-            let bla = Bla {
-                data: Cow::Borrowed(data),
-                name,
-                number: number as u32,
-            };
-            Ok((bla, remaining))
-        }
-    }
-
-    #[test]
-    fn impl_deserialize() {
-        let bla = Bla {
-            data: vec![1, 2, 3, 4].into(),
-            name: "bla",
-            number: 42,
-        };
-        let slice = &[1, 2, 3, 4, 5];
-        let (bla, remaining) = Bla::deserialize(&mut Deserializer::new(), slice).expect("bla");
-        std::thread::spawn(move || {
-            println!("{:?}", bla);
-            let vec = vec![bla];
-        });
-        println!("{:?}", slice);
     }
 }

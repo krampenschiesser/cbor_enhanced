@@ -1,7 +1,8 @@
-use crate::ser::Serializer;
-use half::f16;
-use crate::types::IanaTag;
 use bytes::BufMut;
+use half::f16;
+
+use crate::ser::Serializer;
+use crate::types::IanaTag;
 
 impl Serializer {
     pub fn write_f16_array(&mut self, array: &[f16]) {

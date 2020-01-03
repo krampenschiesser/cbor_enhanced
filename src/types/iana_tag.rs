@@ -1,5 +1,3 @@
-use failure::_core::fmt::{Formatter, Error};
-
 #[derive(Debug, Eq, PartialEq, Hash, Copy, Clone)]
 pub enum IanaTag {
     Unknown(u64),

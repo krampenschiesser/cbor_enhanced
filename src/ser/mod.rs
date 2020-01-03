@@ -1,14 +1,11 @@
-use bytes::{BytesMut, BufMut};
-use crate::types::{IanaTag, MAX_INLINE_ENCODING};
+use std::collections::{BTreeMap, HashMap};
 
+use bytes::{BufMut, BytesMut};
 #[cfg(feature = "iana_numbers")]
 use half::f16;
-use failure::_core::hash::Hash;
-use std::collections::HashMap;
-use safe_transmute::alloc::collections::BTreeMap;
-use nom::lib::std::collections::HashSet;
-use crate::{Value, Special, ReducedSpecial};
 
+use crate::{ReducedSpecial, Value};
+use crate::types::{IanaTag, MAX_INLINE_ENCODING};
 
 #[cfg(feature = "iana_numbers")]
 mod iana_numbers;
@@ -72,7 +69,7 @@ impl Serializer {
 
     fn write_u64_internal(&mut self, value: u64, mask: u8) -> () {
         let slice: [u8; 8] = value.to_be_bytes();
-        let option = slice.iter().enumerate().find(|(pos, b)| **b > 0u8).map(|(pos, _)| pos);
+        let option = slice.iter().enumerate().find(|(_, b)| **b > 0u8).map(|(pos, _)| pos);
         if value <= (MAX_INLINE_ENCODING as u64) {
             self.bytes.reserve(1);
             self.bytes.put_u8(mask | value as u8)

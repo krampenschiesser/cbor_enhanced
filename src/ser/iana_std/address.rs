@@ -1,7 +1,7 @@
+use std::net::IpAddr;
+
 use crate::ser::Serializer;
 use crate::types::IanaTag;
-use std::net::IpAddr;
-use nom::AsBytes;
 
 impl Serializer {
     pub fn write_ip_address(&mut self, address: &IpAddr) {

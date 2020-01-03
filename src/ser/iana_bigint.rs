@@ -1,7 +1,8 @@
-use crate::ser::Serializer;
-use crate::types::IanaTag;
 use num_bigint::{BigInt, BigUint};
 use num_traits::Signed;
+
+use crate::ser::Serializer;
+use crate::types::IanaTag;
 
 impl Serializer {
     pub fn write_biguint(&mut self, uint: BigUint) {

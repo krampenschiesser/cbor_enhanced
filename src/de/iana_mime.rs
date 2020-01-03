@@ -1,10 +1,8 @@
+use mime::Mime;
+
 use crate::de::{Deserializer, Remaining};
-use num_bigint::{BigUint, BigInt};
 use crate::error::CborError;
 use crate::types::IanaTag;
-use uuid::Uuid;
-use regex::Regex;
-use mime::Mime;
 
 impl<'de> Deserializer {
     pub fn take_mime(&self, data: &'de [u8]) -> Result<(Mime, Remaining<'de>), CborError> {

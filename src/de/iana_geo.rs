@@ -1,13 +1,10 @@
+
 use crate::de::{Deserializer, Remaining};
-use num_bigint::{BigUint, BigInt};
 use crate::error::CborError;
 use crate::types::IanaTag;
-use uuid::Uuid;
-use regex::Regex;
-use mime::Mime;
 use crate::value::Value;
 
-#[derive(Debug, PartialEq,Clone,Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct GeoCoordinate {
     pub latitude: f64,
     pub longitude: f64,
@@ -17,8 +14,6 @@ pub struct GeoCoordinate {
 
 impl<'de> Deserializer {
     pub fn take_geo_coordinate(&self, data: &'de [u8]) -> Result<(GeoCoordinate, Remaining<'de>), CborError> {
-        use std::str::FromStr;
-
         let remaining = self.expect_tag(data, IanaTag::GeoCoordinate)?;
 
         let (array_len, remaining) = self.take_array_def(remaining, true)?;

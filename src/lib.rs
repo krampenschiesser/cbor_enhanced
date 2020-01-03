@@ -1,3 +1,9 @@
+pub use de::{Deserialize, Deserializer};
+pub use error::CborError;
+pub use ser::{Serialize, Serializer};
+pub use types::*;
+pub use value::Value;
+
 mod ser;
 mod de;
 
@@ -6,8 +12,3 @@ mod value;
 mod error;
 
 
-pub use ser::{Serializer, Serialize};
-pub use de::{Deserializer, Deserialize};
-pub use error::CborError;
-pub use types::*;
-pub use value::Value;

@@ -1,8 +1,6 @@
+use crate::de::iana_geo::GeoCoordinate;
 use crate::ser::Serializer;
 use crate::types::IanaTag;
-use num_bigint::{BigInt, BigUint};
-use num_traits::Signed;
-use crate::de::iana_geo::GeoCoordinate;
 
 impl Serializer {
     pub fn write_geo(&mut self, coordinate: GeoCoordinate) {

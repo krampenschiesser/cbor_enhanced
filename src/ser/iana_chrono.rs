@@ -1,11 +1,8 @@
+use chrono::{Date, DateTime, FixedOffset, NaiveDate, NaiveDateTime, Offset, Timelike, Utc};
+use chrono::offset::TimeZone;
+
 use crate::ser::Serializer;
 use crate::types::IanaTag;
-use num_bigint::{BigInt, BigUint};
-use num_traits::Signed;
-use chrono::{DateTime, Utc, NaiveDateTime, Date, NaiveDate, Timelike, FixedOffset, Offset};
-use chrono::offset::TimeZone;
-use failure::_core::hint::unreachable_unchecked;
-use chrono::format::Fixed::TimezoneOffset;
 
 pub enum Precision {
     Float,
@@ -25,7 +22,6 @@ impl Serializer {
         self.write_datetime_as_string(&date.and_hms(0, 0, 0));
     }
     pub fn write_naivedatetime_as_string(&mut self, timestamp: &NaiveDateTime) {
-
         let datetime = Utc.fix().from_utc_datetime(&timestamp);
         self.write_datetime_as_string(&datetime);
     }
@@ -80,13 +76,4 @@ impl Serializer {
     pub fn write_naivedate(&mut self, date: &NaiveDate, precision: Precision) {
         self.write_date(&Utc.fix().from_utc_date(date), precision);
     }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_write_date() {}
 }

@@ -1,7 +1,8 @@
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
 use crate::de::{Deserializer, Remaining};
 use crate::error::CborError;
 use crate::types::IanaTag;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 impl<'de> Deserializer {
     pub fn take_ip_address(&self, data: &'de [u8]) -> Result<(IpAddr, Remaining<'de>), CborError> {
@@ -67,13 +68,14 @@ impl<'de> Deserializer {
 
 #[cfg(test)]
 mod tests {
-    use crate::de::Deserializer;
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
+    use crate::de::Deserializer;
 
     #[test]
     fn test_take_ipv4() {
         let slice = b"\xd9\x01\x04\x44\xc0\x0a\x0a\x01";
-        let (address, remaining) = Deserializer::new().take_ip_address(slice).unwrap();
+        let (address, _) = Deserializer::new().take_ip_address(slice).unwrap();
         let expected: Ipv4Addr = "192.10.10.1".parse().unwrap();
         match address {
             IpAddr::V4(v4) => assert_eq!(expected, v4),
@@ -84,7 +86,7 @@ mod tests {
     #[test]
     fn test_take_mac() {
         let slice = b"\xd9\x01\x04\x46\x01\x23\x45\x67\x89\xab";
-        let (address, remaining) = Deserializer::new().take_mac_address(slice).unwrap();
+        let (address, _) = Deserializer::new().take_mac_address(slice).unwrap();
         let expected = b"\x01\x23\x45\x67\x89\xab";
         assert_eq!(address, *expected);
     }
@@ -92,7 +94,7 @@ mod tests {
     #[test]
     fn test_take_ipv6() {
         let slice = b"\xd9\x01\x04\x50\x20\x01\x0d\xb8\x85\xa3\x00\x00\x00\x00\x8a\x2e\x03\x70\x73\x34";
-        let (address, remaining) = Deserializer::new().take_ip_address(slice).unwrap();
+        let (address, _) = Deserializer::new().take_ip_address(slice).unwrap();
         let expected: Ipv6Addr = "2001:db8:85a3::8a2e:370:7334".parse().unwrap();
         match address {
             IpAddr::V6(v6) => assert_eq!(expected, v6),
@@ -103,7 +105,7 @@ mod tests {
     #[test]
     fn test_take_ipv4_and_mask() {
         let slice = b"\xd9\x01\x05\xa1\x44\xc0\xa8\x00\x64\x18\x18";
-        let ((address, length), remaining) = Deserializer::new().take_ip_address_and_mask(slice).unwrap();
+        let ((address, length), _) = Deserializer::new().take_ip_address_and_mask(slice).unwrap();
         let expected: Ipv4Addr = "192.168.0.100".parse().unwrap();
         match address {
             IpAddr::V4(v4) => assert_eq!(expected, v4),

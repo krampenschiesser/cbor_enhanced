@@ -1,9 +1,8 @@
+use nom::number::complete::{be_f32, be_f64, be_i16, be_i32, be_i64, be_i8, be_u16, be_u32, be_u64, be_u8, le_f32, le_f64, le_i16, le_i32, le_i64, le_u16, le_u32, le_u64};
+
 use crate::de::{Deserializer, Remaining};
 use crate::error::CborError;
-use nom::number::complete::{be_u16, le_u16, be_f32, le_f32, be_f64, le_f64, be_u8, be_u32, le_u32, be_u64, le_u64, be_i16, le_i16, be_i32, le_i32, be_i64, le_i64, be_i8};
-use crate::types::IanaTag;
 use crate::types::IanaTag::*;
-
 
 impl<'de> Deserializer {
     /// please read
@@ -45,7 +44,7 @@ impl<'de> Deserializer {
         self.take_n_array(data, &[F64BeArray, F64LeArray], 8, func)
     }
     pub fn take_u8_array(&self, data: &'de [u8]) -> Result<(Vec<u8>, Remaining<'de>), CborError> {
-        let func = |tag, to_read| {
+        let func = |_, to_read| {
             let (ret, val) = be_u8(to_read)?;
             Ok((val, ret))
         };
@@ -117,7 +116,7 @@ impl<'de> Deserializer {
         self.take_transmuted_array(data, Sint8Array, Sint8Array, 1)
     }
     pub fn take_i8_array(&self, data: &'de [u8]) -> Result<(Vec<i8>, Remaining<'de>), CborError> {
-        let func = |tag, to_read| {
+        let func = |_, to_read| {
             let (ret, val) = be_i8(to_read)?;
             Ok((val, ret))
         };

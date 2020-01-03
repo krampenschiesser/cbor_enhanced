@@ -228,7 +228,7 @@ fn test_string(bytes: &[u8], expected: &str) {
     let mut serializer = Serializer::new();
     let (value, _) = deserializer.take_value(bytes).unwrap();
     let wrapped_value = match value.clone() {
-        Value::Tag(tag, val) => {
+        Value::Tag(_, val) => {
             val
         }
         val => Box::new(val),
@@ -262,7 +262,7 @@ fn test_byte(bytes: &[u8], expected: &[u8], skip_serialization: bool) {
     let mut serializer = Serializer::new();
     let (value, _) = deserializer.take_value(bytes).unwrap();
     let wrapped_value = match value.clone() {
-        Value::Tag(tag, val) => {
+        Value::Tag(_, val) => {
             val
         }
         val => Box::new(val),
@@ -307,8 +307,8 @@ fn test_array<T>(bytes: &[u8], expected_len: usize, element_check: T, skip_seria
 
 #[test]
 fn test_arrays() {
-    test_array(b"\x80", 0, |val| {}, false);
-    test_array(b"\x9f\xff", 0, |val| {}, true);
+    test_array(b"\x80", 0, |_| {}, false);
+    test_array(b"\x9f\xff", 0, |_| {}, true);
     test_array(b"\x83\x01\x02\x03", 3, |val| {
         assert_pos_number(val.get(0).unwrap(), 1);
         assert_pos_number(val.get(1).unwrap(), 2);
@@ -418,7 +418,7 @@ fn assert_text(value: &Value, text: &str) {
 
 #[test]
 fn test_maps() {
-    test_map(b"\xa0", 0, |val| {}, false);
+    test_map(b"\xa0", 0, |_| {}, false);
     test_map(b"\xa2\x01\x02\x03\x04", 2, |val| {
         let (key, value) = val.get(0).unwrap();
         assert_pos_number(key, 1);
@@ -453,7 +453,6 @@ fn test_maps() {
         assert_text(key, "e");
         assert_text(value, "E");
     }, false);
-//    bf61610161629f0203ffff
     test_map(b"\xbf\x61\x61\x01\x61\x62\x9f\x02\x03\xff\xff", 2, |val| {
         let (key, value) = val.get(0).unwrap();
         assert_text(key, "a");

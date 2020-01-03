@@ -1,5 +1,5 @@
-use crate::types::IanaTag;
 use crate::ReducedSpecial;
+use crate::types::IanaTag;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value<'a> {
@@ -10,7 +10,7 @@ pub enum Value<'a> {
     Text(&'a str),
     Bool(bool),
     Array(Vec<Value<'a>>),
-    Map(Vec<(Value<'a>,Value<'a>)>),
+    Map(Vec<(Value<'a>, Value<'a>)>),
     Tag(IanaTag, Box<Value<'a>>),
     Special(ReducedSpecial),
 }

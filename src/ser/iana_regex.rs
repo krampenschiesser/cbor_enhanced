@@ -1,6 +1,7 @@
+use regex::Regex;
+
 use crate::ser::Serializer;
 use crate::types::IanaTag;
-use regex::Regex;
 
 impl Serializer {
     pub fn write_regex_as_string(&mut self, regex: &Regex) {

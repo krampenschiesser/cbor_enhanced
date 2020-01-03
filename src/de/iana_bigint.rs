@@ -1,5 +1,6 @@
+use num_bigint::{BigInt, BigUint};
+
 use crate::de::{Deserializer, Remaining};
-use num_bigint::{BigUint, BigInt};
 use crate::error::CborError;
 use crate::types::IanaTag;
 

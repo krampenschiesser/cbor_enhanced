@@ -1,14 +1,14 @@
-use crate::error::CborError;
-use crate::types::Length::AdditionalBytes;
-use nom::bytes::complete::take;
-use nom::number::complete::{be_u8, be_u16, be_u64};
+use nom::number::complete::{be_u16, be_u64, be_u8};
 use nom::number::streaming::be_u32;
-use crate::de::Remaining;
-
-mod iana_tag;
-pub const MAX_INLINE_ENCODING: u8 = 23;
 
 pub use iana_tag::*;
+
+use crate::de::Remaining;
+use crate::error::CborError;
+
+mod iana_tag;
+
+pub const MAX_INLINE_ENCODING: u8 = 23;
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum ByteSize {
@@ -144,6 +144,7 @@ pub enum ReducedSpecial {
     Undefined,
     Break,
 }
+
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Special {
     Bool(bool),
@@ -211,7 +212,7 @@ pub enum Type {
 impl Type {
     pub fn is_tag(&self) -> bool {
         match self {
-            Type::Tag(any) => true,
+            Type::Tag(_) => true,
             _ => false
         }
     }
@@ -273,13 +274,4 @@ impl Type {
             }
         }
     }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn major_type_byte_encoding() {}
 }

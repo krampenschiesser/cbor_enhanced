@@ -1,6 +1,7 @@
+use mime::Mime;
+
 use crate::ser::Serializer;
 use crate::types::IanaTag;
-use mime::Mime;
 
 impl Serializer {
     pub fn write_mime_as_string(&mut self, mime: Mime) {

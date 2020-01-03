@@ -1,6 +1,7 @@
+use uuid::Uuid;
+
 use crate::ser::Serializer;
 use crate::types::IanaTag;
-use uuid::Uuid;
 
 impl Serializer {
     pub fn write_uuid(&mut self, uuid: &Uuid) {
