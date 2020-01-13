@@ -1,5 +1,5 @@
 [package]
-name = "derive_protocol"
+name = "cbor_enhanced_derive_protocol"
 version = "0.1.0"
 authors = ["krampenschiesser <krampenschiesser@gmail.com>"]
 edition = "2018"
@@ -11,5 +11,5 @@ license = "MIT"
 proc-macro = true
 
 [dependencies]
-cbor_enhanced = { path = "../core" }
-
+syn = "1.0.13"
+quote = "1.0.2"

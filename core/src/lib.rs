@@ -12,3 +12,6 @@ mod value;
 mod error;
 
 
+
+#[cfg(feature = "protocol_derive")]
+mod protocol_derive;
