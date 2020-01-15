@@ -212,6 +212,7 @@ macro_rules! impl_neg_number {
     }
 }
 
+impl_pos_number!(usize);
 impl_pos_number!(u64);
 impl_pos_number!(u32);
 impl_pos_number!(u16);
