@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use bytes::{BufMut, BytesMut};
+use bytes::{BufMut, BytesMut, Bytes};
 #[cfg(feature = "iana_numbers")]
 use half::f16;
 
@@ -191,6 +191,10 @@ impl Serializer {
     pub fn write_break(&mut self) {
         self.bytes.put_u8(0b1110_0000 | 31u8);
     }
+
+    pub fn bytes(self) -> Bytes {
+        self.bytes.freeze()
+    }
 }
 
 macro_rules! impl_pos_number {
@@ -216,6 +220,7 @@ impl_pos_number!(usize);
 impl_pos_number!(u64);
 impl_pos_number!(u32);
 impl_pos_number!(u16);
+impl_neg_number!(isize);
 impl_neg_number!(i8);
 impl_neg_number!(i16);
 impl_neg_number!(i32);
@@ -296,5 +301,16 @@ impl Serialize for String {
 impl Serialize for &str {
     fn serialize(&self, serializer: &mut Serializer) {
         serializer.write_text(self);
+    }
+}
+
+impl<T: Serialize> Serialize for Option<T> {
+    fn serialize(&self, serializer: &mut Serializer) {
+        match self {
+            Some(val) => {
+                val.serialize(serializer)
+            }
+            None => (),
+        }
     }
 }

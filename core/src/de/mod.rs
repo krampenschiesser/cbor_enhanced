@@ -2,10 +2,10 @@ use std::fmt::Debug;
 
 #[cfg(feature = "iana_numbers")]
 use half::f16;
-use nom::bytes::complete::{take};
+use nom::bytes::complete::take;
 use nom::number::complete::{be_f32, be_f64, be_u8};
 #[cfg(feature = "iana_numbers")]
-use nom::number::complete::{be_u16};
+use nom::number::complete::be_u16;
 
 use crate::error::CborError;
 use crate::ReducedSpecial;
@@ -64,6 +64,9 @@ impl<'de> Deserializer {
         Ok(tuple)
     }
 
+    pub fn take_string(&self, data: &'de [u8], skip_tags: bool) -> Result<(&'de str, Remaining<'de>), CborError> {
+        self.take_text(data, skip_tags)
+    }
     pub fn take_text(&self, data: &'de [u8], skip_tags: bool) -> Result<(&'de str, Remaining<'de>), CborError> {
         let (cbor_type, data) = self.take_type(data, skip_tags)?;
 
@@ -120,6 +123,9 @@ impl<'de> Deserializer {
         let (data, o) = match cbor_type {
             Type::NegativeInteger(int) => {
                 int.take_value(remaining)
+            }
+            Type::UnsignedInteger(int) => {
+                int.take_value(remaining).map(|v| (v.0, v.1 as i128))
             }
             _ => Err(CborError::ExpectNegative(cbor_type))
         }?;
@@ -397,6 +403,18 @@ impl<'de> Deserializer {
         let (_, remaining) = self.take_value(remaining)?;
         Ok(remaining)
     }
+
+    pub fn found_contains_any(&self, haystack: &[usize], needle: &[usize]) -> bool {
+        needle.iter().any(|v| haystack.contains(&v))
+    }
+
+    pub fn check_is_some<T>(&self, option: &Option<T>, name: &'static str) -> Result<(),CborError> {
+        if option.is_none() {
+            Err(CborError::NoValueFound(name))
+        }else {
+            Ok(())
+        }
+    }
 }
 
 
@@ -406,9 +424,9 @@ impl<'de> Deserialize<'de> for &'de str {
     }
 }
 
-impl<'de> Deserialize<'de> for u32 {
+impl<'de> Deserialize<'de> for String {
     fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
-        deserializer.take_unsigned(data, true).map(|(v, remaining)| (v as u32, remaining))
+        deserializer.take_text(data, true).map(|t| (String::from(t.0), t.1))
     }
 }
 
@@ -436,5 +454,48 @@ impl<'de, T: Deserialize<'de> + Debug> Deserialize<'de> for Vec<T> {
             visited_elemnents += 1;
         }
         Ok((vec, remaining))
+    }
+}
+
+
+macro_rules! impl_pos_number {
+    ($number:ty) => {
+        impl<'de> Deserialize<'de> for $number {
+            fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
+                deserializer.take_unsigned(data, true).map(|(v, remaining)| (v as $number, remaining))
+            }
+        }
+    }
+}
+macro_rules! impl_neg_number {
+    ($number:ty) => {
+        impl<'de> Deserialize<'de> for $number {
+            fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
+                deserializer.take_negative(data, true).map(|(v, remaining)| (v as $number, remaining))
+            }
+        }
+    }
+}
+
+impl_pos_number!(usize);
+impl_pos_number!(u16);
+impl_pos_number!(u32);
+impl_pos_number!(u64);
+
+impl_neg_number!(isize);
+impl_neg_number!(i8);
+impl_neg_number!(i16);
+impl_neg_number!(i32);
+impl_neg_number!(i64);
+impl_neg_number!(i128);
+
+impl<'de, T: Deserialize<'de>>  Deserialize<'de> for Option<T> {
+    fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
+        let result = T::deserialize(deserializer, data);
+        if let Ok(res) =result{
+            Ok((Some(res.0),res.1))
+        }else {
+            Ok((None,data))
+        }
     }
 }

@@ -74,6 +74,8 @@ pub enum CborError {
     ExpectNumber(String),
     #[fail(display = "Infinite bytes and strings are not supported")]
     InfiniteNotSupported,
+    #[fail(display = "No value found for {}", _0)]
+    NoValueFound(&'static str),
 }
 
 impl nom::error::ParseError<&[u8]> for CborError {
