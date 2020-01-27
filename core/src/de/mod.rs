@@ -404,7 +404,7 @@ impl<'de> Deserializer {
         Ok(remaining)
     }
 
-    pub fn found_contains_any(&self, haystack: &[usize], needle: &[usize]) -> bool {
+    pub fn found_contains_any(&self, haystack: &[u64], needle: &[u64]) -> bool {
         needle.iter().any(|v| haystack.contains(&v))
     }
 
@@ -430,7 +430,7 @@ impl<'de> Deserialize<'de> for String {
     }
 }
 
-impl<'de, T: Deserialize<'de> + Debug> Deserialize<'de> for Vec<T> {
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for Vec<T> {
     fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
         let (o, mut remaining) = deserializer.take_array_def(data, true)?;
         let mut vec = Vec::with_capacity(o.unwrap_or(100));

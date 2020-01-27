@@ -10,13 +10,28 @@ use proc_macro::TokenStream;
 use proc_macro2::{Group, Ident, Literal, TokenTree};
 use syn::{Attribute, Data, Fields, Index};
 use syn::spanned::Spanned;
+use syn::export::Debug;
 
 mod ser;
 mod de;
 
-pub(crate) enum Either<A, B> {
+#[derive(Clone,Debug)]
+pub(crate) enum Either<A: Clone + Debug, B: Clone+ Debug> {
     A(A),
     B(B),
+}
+
+impl<A:Clone+ Debug,B:Clone+ Debug> Either<A,B> {
+    pub fn is_a(&self) -> bool {
+        match self {
+            Either::A(_) => true,
+            _ => false
+        }
+    }
+
+    pub fn is_b(&self) -> bool {
+        !self.is_a()
+    }
 }
 
 #[proc_macro_derive(cbor_protocol, attributes(reserved, default, id))]
