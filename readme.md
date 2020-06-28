@@ -28,3 +28,8 @@ In addition several iana tags are supported but need to be activated via feature
 
 * Zero-Copy deserialization
 * Support for various iana tags
+
+
+## License
+
+MIT and Apache
