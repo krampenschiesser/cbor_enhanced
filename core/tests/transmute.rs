@@ -1,6 +1,5 @@
-use bytes::Buf;
 use cbor_enhanced::{Deserializer, Serializer};
-use safe_transmute::{PedanticGuard, PermissiveGuard};
+use safe_transmute::PedanticGuard;
 use std::fmt::Debug;
 
 #[test]
