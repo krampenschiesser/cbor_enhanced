@@ -24,5 +24,21 @@ fn main() {
         //have a look at zerocopy example if you don't want to allocate the vec
         let output: Vec<u16> = deserializer.take_u16_array(serialized.as_ref()).unwrap().0;
         assert_eq!(data_ref, output.as_slice());
+
+        serializer.reset();
+        let data = [42f32; 200];
+        let data_ref: &[f32] = &data;
+
+        serializer.write_f32_array(data_ref);
+        let serialized = serializer.get_bytes();
+
+        //have a look at zerocopy example if you don't want to allocate the vec
+        let output: Vec<f32> = deserializer.take_f32_array(serialized.as_ref()).unwrap().0;
+        assert_eq!(data_ref, output.as_slice());
     }
+}
+
+#[test]
+fn test_arrays_example() {
+    main();
 }

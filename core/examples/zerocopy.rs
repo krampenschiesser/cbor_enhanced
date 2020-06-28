@@ -17,18 +17,31 @@ fn main() {
     #[cfg(feature = "iana_std")]
     {
         serializer.reset();
-        let data = [42f32; 200];
-        let input: &[f32] = &data;
-        serializer.write_f32_array(input);
+        let data = [42u64; 200];
+        let input: &[u64] = &data;
+        #[cfg(target_endian = "little")]
+        {
+            serializer.write_u64_le_array(input);
+        }
+        #[cfg(target_endian = "big")]
+        {
+            serializer.write_u64_array(input);
+        }
 
         // DANGER ZONE, read
         // https://doc.rust-lang.org/std/mem/fn.transmute.html
         // and
         // https://doc.rust-lang.org/nomicon/transmutes.html
         let output = deserializer
-            .take_f32_array_transmuted(serializer.get_bytes())
+            .take_u64_array_transmuted(serializer.get_bytes())
             .unwrap()
             .0;
+        assert_eq!(input.len(), output.len());
         assert_eq!(input, output);
     }
+}
+
+#[test]
+fn test_zerocopy_example() {
+    main();
 }

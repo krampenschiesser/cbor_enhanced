@@ -146,3 +146,8 @@ fn main() {
         derive_main::derive_main();
     }
 }
+
+#[test]
+fn test_protocol_derive_example() {
+    main();
+}

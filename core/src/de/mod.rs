@@ -330,8 +330,11 @@ impl<'de> Deserializer {
                 got: bytes.len(),
             });
         }
-
-        let transmuted: &'de [T] = safe_transmute::transmute_many_pedantic::<T>(bytes)?;
+        let transmuted = unsafe {
+            safe_transmute::trivial::transmute_trivial_many::<T, safe_transmute::PedanticGuard>(
+                bytes,
+            )
+        }?;
         Ok((transmuted, remaining))
     }
 

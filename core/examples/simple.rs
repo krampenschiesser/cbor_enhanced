@@ -31,5 +31,9 @@ fn main() {
         let vec = to_vec(&id);
         assert_eq!(id, from_bytes(vec.as_slice()).unwrap());
     }
-    panic!("bla");
+}
+
+#[test]
+fn test_simple_example() {
+    main();
 }
