@@ -12,7 +12,7 @@ keywords= ["cbor","binary serialization", "binary deserialization"]
 categories = ["parser-implementations", "parsing"]
 homepage = "https://github.com/krampenschiesser/cbor_enhanced"
 repository = "https://github.com/krampenschiesser/cbor_enhanced"
-readme="../readme.md"
+readme="readme.md"
 documentation = "https://docs.rs/cbor_enhanced"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
