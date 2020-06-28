@@ -14,7 +14,7 @@ mod types;
 mod value;
 
 #[cfg(feature = "protocol_derive")]
-mod protocol_derive;
+pub use cbor_enhanced_derive_protocol::cbor_protocol;
 
 pub fn to_bytes<T: Serialize>(t: &T) -> Bytes {
     let mut serializer = Serializer::new();

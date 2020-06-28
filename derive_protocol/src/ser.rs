@@ -19,8 +19,8 @@ pub(crate) fn generate_serialize(input: &syn::DeriveInput) -> TokenStream {
 
     let (impl_generic, type_generic, where_clause) = generics.split_for_impl();
     quote! {
-        impl#impl_generic crate::Serialize for #identifier#type_generic #where_clause {
-            fn serialize(&self, serializer: &mut crate::Serializer) {
+        impl#impl_generic cbor_enhanced::Serialize for #identifier#type_generic #where_clause {
+            fn serialize(&self, serializer: &mut cbor_enhanced::Serializer) {
                 #length_token
 
                 #(#serialized_fields)*

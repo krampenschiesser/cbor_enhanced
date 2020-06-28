@@ -125,7 +125,7 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
                     else #full
                     #(#empty_variants)*
                     else {
-                        return Err(CborError::NoValueFound(#string));
+                        return Err(cbor_enhanced::CborError::NoValueFound(#string));
                     };
                 }
             } else if index > 0 {
@@ -159,8 +159,8 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
     let (_impl_generic, type_generic, where_clause) = type_generics.split_for_impl();
 
     let q = quote! {
-        impl#main_generics crate::Deserialize#trait_generics for #identifier #type_generic #where_clause  {
-            fn deserialize(deserializer: &mut Deserializer, data: &#lifetime [u8]) -> Result<(Self, &#lifetime [u8]), CborError> {
+        impl#main_generics cbor_enhanced::Deserialize#trait_generics for #identifier #type_generic #where_clause  {
+            fn deserialize(deserializer: &mut cbor_enhanced::Deserializer, data: &#lifetime [u8]) -> Result<(Self, &#lifetime [u8]), cbor_enhanced::CborError> {
                 #(#declarations)*
 
                 let mut found_ids: Vec<u64> = Vec::new();

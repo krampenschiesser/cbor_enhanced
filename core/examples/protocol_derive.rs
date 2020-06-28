@@ -1,12 +1,12 @@
-// mod o;
+// in this example we show how you can serialize structs with the custom derive macro
+// It is very similar to protobuf in that it numbers the fields but it doesn't require an external schema, the source code is the schema
+extern crate cbor_enhanced;
 
-#[cfg(test)]
-mod tests {
+#[cfg(feature = "protocol_derive")]
+mod derive_main {
+    use cbor_enhanced::cbor_protocol;
+    use cbor_enhanced::*;
     use std::fmt::Debug;
-
-    use cbor_enhanced_derive_protocol::*;
-
-    use crate::{to_vec, CborError, Deserialize, Deserializer, Serialize};
 
     #[derive(cbor_protocol, Clone, Eq, PartialEq, Debug)]
     #[reserved(5, 6, 7)]
@@ -90,8 +90,7 @@ mod tests {
         bytes: &'a [u8],
     }
 
-    #[test]
-    fn it_works() {
+    pub fn derive_main() {
         let bla = BlaStruct {
             name: "hello world".into(),
             value: 42,
@@ -138,5 +137,12 @@ mod tests {
 
         let (val, _) = T::deserialize(&mut deserializer, bytes).expect("Deserialization failed!");
         assert_eq!(&val, t);
+    }
+}
+
+fn main() {
+    #[cfg(feature = "protocol_derive")]
+    {
+        derive_main::derive_main();
     }
 }
