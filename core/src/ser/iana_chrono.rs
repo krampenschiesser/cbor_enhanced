@@ -3,6 +3,7 @@ use chrono::{Date, DateTime, FixedOffset, NaiveDate, NaiveDateTime, Offset, Time
 
 use crate::ser::Serializer;
 use crate::types::IanaTag;
+use crate::Serialize;
 
 pub enum Precision {
     Float,
@@ -79,5 +80,11 @@ impl Serializer {
     }
     pub fn write_naivedate(&mut self, date: &NaiveDate, precision: Precision) {
         self.write_date(&Utc.fix().from_utc_date(date), precision);
+    }
+}
+
+impl Serialize for DateTime<FixedOffset> {
+    fn serialize(&self, serializer: &mut Serializer) {
+        serializer.write_datetime(self, Precision::Nanos);
     }
 }

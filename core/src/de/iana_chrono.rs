@@ -4,6 +4,7 @@ use nom::number::complete::be_u8;
 use crate::de::{Deserializer, Remaining};
 use crate::error::CborError;
 use crate::types::{IanaTag, Type};
+use crate::Deserialize;
 
 impl<'de> Deserializer {
     pub fn take_timestamp(
@@ -124,5 +125,16 @@ impl<'de> Deserializer {
         } else {
             Err(CborError::Unknown("Could not parse date time for Tag 1001"))
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for DateTime<FixedOffset> {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
+        deserializer
+            .take_timestamp(data)
+            .map(|(v, remaining)| (v, remaining))
     }
 }

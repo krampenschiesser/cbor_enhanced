@@ -38,6 +38,8 @@ pub enum CborError {
     ExpectNegative(Type),
     #[fail(display = "Expected special but got: {:?}", _0)]
     ExpectSpecial(Type),
+    #[fail(display = "Expected reduced special but got: {:?}", _0)]
+    ExpectReducedSpecial(Special),
     #[fail(display = "Expected array but got: {:?}", _0)]
     ExpectArray(Type),
     #[fail(display = "Expected map but got: {:?}", _0)]

@@ -2,6 +2,7 @@ use crate::de::{Deserializer, Remaining};
 use crate::error::CborError;
 use crate::types::IanaTag;
 use crate::value::Value;
+use crate::Deserialize;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct GeoCoordinate {
@@ -71,5 +72,15 @@ fn convert_value(value: Value) -> Result<f64, CborError> {
         ))?),
         Value::F64(val) => Ok(val),
         val => Err(CborError::ExpectNumber(format!("{:?}", val))),
+    }
+}
+impl<'de> Deserialize<'de> for GeoCoordinate {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
+        deserializer
+            .take_geo_coordinate(data)
+            .map(|(v, remaining)| (v, remaining))
     }
 }

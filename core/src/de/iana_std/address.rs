@@ -3,6 +3,7 @@ use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use crate::de::{Deserializer, Remaining};
 use crate::error::CborError;
 use crate::types::IanaTag;
+use crate::Deserialize;
 
 impl<'de> Deserializer {
     pub fn take_ip_address(&self, data: &'de [u8]) -> Result<(IpAddr, Remaining<'de>), CborError> {
@@ -80,6 +81,16 @@ impl<'de> Deserializer {
                 got: slice.len(),
             })
         }
+    }
+}
+impl<'de> Deserialize<'de> for IpAddr {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
+        deserializer
+            .take_ip_address(data)
+            .map(|(v, remaining)| (v, remaining))
     }
 }
 

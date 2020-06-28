@@ -19,11 +19,13 @@ mod protocol_derive;
 pub fn to_bytes<T: Serialize>(t: &T) -> Bytes {
     let mut serializer = Serializer::new();
     t.serialize(&mut serializer);
-    serializer.bytes()
+    serializer.into_bytes()
 }
 
 pub fn to_vec<T: Serialize>(t: &T) -> Vec<u8> {
-    to_bytes(t).to_vec()
+    let mut serializer = Serializer::new();
+    t.serialize(&mut serializer);
+    serializer.into_bytes().to_vec()
 }
 
 pub fn from_bytes<'de, T: Deserialize<'de>>(bytes: &'de [u8]) -> Result<T, CborError> {

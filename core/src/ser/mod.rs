@@ -6,6 +6,9 @@ use half::f16;
 
 use crate::types::{IanaTag, MAX_INLINE_ENCODING};
 use crate::{ReducedSpecial, Value};
+use nom::AsBytes;
+use std::rc::Rc;
+use std::sync::Arc;
 
 #[cfg(feature = "iana_bigint")]
 mod iana_bigint;
@@ -46,6 +49,12 @@ impl Serializer {
         Serializer {
             bytes: BytesMut::new(),
         }
+    }
+    pub fn with_bytes(bytes: BytesMut) -> Self {
+        Self { bytes }
+    }
+    pub fn reset(&mut self) {
+        self.bytes.clear();
     }
     pub fn write_array_def(&mut self, length: usize) {
         self.write_u64_internal(length as u64, 0b1000_0000);
@@ -197,7 +206,10 @@ impl Serializer {
         self.bytes.put_u8(0b1110_0000 | 31u8);
     }
 
-    pub fn bytes(self) -> Bytes {
+    pub fn get_bytes(&self) -> &[u8] {
+        self.bytes.as_bytes()
+    }
+    pub fn into_bytes(self) -> Bytes {
         self.bytes.freeze()
     }
 }
@@ -314,5 +326,17 @@ impl<T: Serialize> Serialize for Option<T> {
             Some(val) => val.serialize(serializer),
             None => (),
         }
+    }
+}
+
+impl<T: Serialize> Serialize for Arc<T> {
+    fn serialize(&self, serializer: &mut Serializer) {
+        self.as_ref().serialize(serializer)
+    }
+}
+
+impl<T: Serialize> Serialize for Rc<T> {
+    fn serialize(&self, serializer: &mut Serializer) {
+        self.as_ref().serialize(serializer)
     }
 }

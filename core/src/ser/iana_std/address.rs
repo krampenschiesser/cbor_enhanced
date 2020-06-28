@@ -2,6 +2,7 @@ use std::net::IpAddr;
 
 use crate::ser::Serializer;
 use crate::types::IanaTag;
+use crate::Serialize;
 
 impl Serializer {
     pub fn write_ip_address(&mut self, address: &IpAddr) {
@@ -19,5 +20,11 @@ impl Serializer {
             IpAddr::V6(v6) => self.write_bytes(&v6.octets()),
         }
         self.write_u64(mask as u64);
+    }
+}
+
+impl Serialize for IpAddr {
+    fn serialize(&self, serializer: &mut Serializer) {
+        serializer.write_ip_address(self);
     }
 }

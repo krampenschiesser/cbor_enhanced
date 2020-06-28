@@ -1,9 +1,10 @@
 use crate::de::iana_geo::GeoCoordinate;
 use crate::ser::Serializer;
 use crate::types::IanaTag;
+use crate::Serialize;
 
 impl Serializer {
-    pub fn write_geo(&mut self, coordinate: GeoCoordinate) {
+    pub fn write_geo(&mut self, coordinate: &GeoCoordinate) {
         self.write_tag(IanaTag::GeoCoordinate);
 
         let len = 2
@@ -19,5 +20,11 @@ impl Serializer {
         if let Some(val) = coordinate.uncertainty {
             self.write_f64(val);
         }
+    }
+}
+
+impl Serialize for GeoCoordinate {
+    fn serialize(&self, serializer: &mut Serializer) {
+        serializer.write_geo(self);
     }
 }

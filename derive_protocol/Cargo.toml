@@ -1,12 +1,10 @@
 [package]
 name = "cbor_enhanced_derive_protocol"
 version = "0.1.0"
-authors = ["krampenschiesser <krampenschiesser@gmail.com>"]
+authors = ["Christian Loehnert"]
 edition = "2018"
-license = "MIT"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
+license = "MIT OR Apache-2.0"
+description = "Derive macro implementation for cbor_enhanced"
 [lib]
 proc-macro = true
 

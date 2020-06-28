@@ -9,6 +9,10 @@ use crate::error::CborError;
 use crate::types::{IanaTag, Special, Type};
 use crate::value::Value;
 use crate::ReducedSpecial;
+use nom::lib::std::collections::HashMap;
+use std::hash::Hash;
+use std::rc::Rc;
+use std::sync::Arc;
 
 #[cfg(feature = "iana_bigint")]
 mod iana_bigint;
@@ -331,6 +335,22 @@ impl<'de> Deserializer {
         Ok((transmuted, remaining))
     }
 
+    pub fn take_reduced_special(
+        &self,
+        data: &'de [u8],
+    ) -> Result<(ReducedSpecial, Remaining<'de>), CborError> {
+        let (cbor_type, remaining) = self.take_type(data, false)?;
+        match cbor_type {
+            Type::Special(s) => match s {
+                Special::Break => Ok((ReducedSpecial::Break, remaining)),
+                Special::Null => Ok((ReducedSpecial::Null, remaining)),
+                Special::Undefined => Ok((ReducedSpecial::Undefined, remaining)),
+                e => Err(CborError::ExpectReducedSpecial(e)),
+            },
+            _ => Err(CborError::ExpectSpecial(cbor_type)),
+        }
+    }
+
     pub fn take_value(&self, data: &'de [u8]) -> Result<(Value<'de>, Remaining<'de>), CborError> {
         let (cbor_type, remaining) = self.take_type(data, false)?;
         match cbor_type {
@@ -565,6 +585,53 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Option<T> {
         }
     }
 }
+impl<'de, K: Deserialize<'de> + Eq + Hash, V: Deserialize<'de>> Deserialize<'de> for HashMap<K, V> {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
+        let (length, remaining) = deserializer.take_map_def(data, true)?;
+        let mut to_read = remaining;
+        let mut map = if let Some(length) = length {
+            HashMap::with_capacity(length)
+        } else {
+            HashMap::new()
+        };
+
+        if let Some(length) = length {
+            for _ in 0..length {
+                let (key, ret) = K::deserialize(deserializer, to_read)?;
+                to_read = ret;
+
+                let (value, ret) = V::deserialize(deserializer, to_read)?;
+                to_read = ret;
+                map.insert(key, value);
+            }
+        } else {
+            loop {
+                let end = if let Ok((special, _)) = deserializer.take_reduced_special(to_read) {
+                    match special {
+                        ReducedSpecial::Break => true,
+                        _ => false,
+                    }
+                } else {
+                    false
+                };
+                if end {
+                    break;
+                }
+
+                let (key, ret) = K::deserialize(deserializer, to_read)?;
+                to_read = ret;
+
+                let (value, ret) = V::deserialize(deserializer, to_read)?;
+                to_read = ret;
+                map.insert(key, value);
+            }
+        }
+        Ok((map, to_read))
+    }
+}
 
 impl<'de> Deserialize<'de> for bool {
     fn deserialize(
@@ -574,5 +641,44 @@ impl<'de> Deserialize<'de> for bool {
         deserializer
             .take_bool(data, true)
             .map(|(v, remaining)| (v, remaining))
+    }
+}
+
+impl<'de> Deserialize<'de> for f32 {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
+        deserializer
+            .take_float(data, true)
+            .map(|(v, remaining)| (v as f32, remaining))
+    }
+}
+
+impl<'de> Deserialize<'de> for f64 {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
+        deserializer
+            .take_float(data, true)
+            .map(|(v, remaining)| (v as f64, remaining))
+    }
+}
+
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for Arc<T> {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
+        T::deserialize(deserializer, data).map(|t| (Arc::new(t.0), t.1))
+    }
+}
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for Rc<T> {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
+        T::deserialize(deserializer, data).map(|t| (Rc::new(t.0), t.1))
     }
 }
