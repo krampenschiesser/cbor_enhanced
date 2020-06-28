@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 #[cfg(feature = "iana_numbers")]
 use half::f16;
 use nom::bytes::complete::take;

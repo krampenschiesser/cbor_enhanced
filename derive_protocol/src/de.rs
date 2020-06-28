@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use proc_macro2::{Group, Ident, Literal, TokenStream};
-use syn::{Attribute, Data, Field, GenericParam, Generics, Index, Lifetime, LifetimeDef, parse2, Path, PathArguments, Type, TypePath, TypeReference, TypeSlice, Variant};
+use syn::{Attribute, Data, Field, GenericParam, Generics, Index, Lifetime, LifetimeDef, parse2, Path, PathArguments, Type, TypePath, TypeReference,  Variant};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::token::Token;
 
 use crate::Either;
 
@@ -52,7 +51,7 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
         let ty_string = quote!(#ty).to_string().replace(" ", "");
 
         let ty = match &f.ty {
-            Type::Path(p) => {
+            Type::Path(_p) => {
                 let ty = to_non_generic_type(&f.ty);
                 quote! {let (val, rem) = #ty::deserialize(deserializer, data)?;}
             }
@@ -88,12 +87,11 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
     let checked_fields = check_fields(&fields, identifier);
     let instantiated_fields = instantiate_fields(&fields);
 
-    let is_enum = fields.iter().any(|f| f.variant.is_some());
     let mut variants: HashMap<Ident, Vec<DeclaredField>> = HashMap::new();
     fields.iter().filter(|f| f.variant.is_some()).for_each(|f| {
         variants.entry(f.variant.clone().unwrap()).or_insert(Vec::new()).push(f.clone())
     });
-    let mut variants: Vec<_> = variants.iter().enumerate().map(|(index, (variant, fields))| {
+    let variants: Vec<_> = variants.iter().enumerate().map(|(index, (variant, fields))| {
         let ids: Vec<_> = fields.iter().map(|f| f.id).collect();
         let tuple = fields.iter().any(|f| f.identifier.is_b());
         let instantiated_fields = instantiate_fields(fields);
@@ -146,7 +144,7 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
         }
     };
 
-    let (impl_generic, type_generic, where_clause) = type_generics.split_for_impl();
+    let (_impl_generic, type_generic, where_clause) = type_generics.split_for_impl();
 
     let q = quote! {
         impl#main_generics crate::Deserialize#trait_generics for #identifier #type_generic #where_clause  {
@@ -182,7 +180,6 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
 
 fn check_fields(fields: &Vec<DeclaredField>, identifier: &Ident) -> Vec<TokenStream> {
     fields.iter().map(|f| {
-        let field_id = f.id;
         let render_name = &f.render_name;
 
         let field_name = match &f.identifier {
@@ -298,8 +295,6 @@ fn get_field_declarations(data: &Data) -> Vec<DeclaredField> {
         Data::Enum(my_enum) => {
             my_enum.variants.iter().map(|v| {
                 v.fields.iter().enumerate().map(|(pos, f)| {
-                    let id = get_id(f, Some(v));
-                    let default = get_default(f);
                     transform_field(pos, f, Some(v))
                 }).collect::<Vec<_>>()
             }).flat_map(|v| v.into_iter()).collect()
@@ -307,7 +302,7 @@ fn get_field_declarations(data: &Data) -> Vec<DeclaredField> {
         Data::Struct(my_struct) => {
             my_struct.fields.iter().enumerate().map(|(pos, f)| transform_field(pos, f, None)).collect()
         }
-        Data::Union(union) => {
+        Data::Union(_union) => {
             unimplemented!("union field declarations");
         }
     }
@@ -403,15 +398,6 @@ struct DeclaredField {
 struct DeclaredEmptyVariant {
     variant: Ident,
     id: u64,
-}
-
-impl DeclaredField {
-    pub fn is_option(&self) -> bool {
-        match self.default {
-            FieldDefault::Option => true,
-            _ => false
-        }
-    }
 }
 
 #[derive(Debug, Clone)]

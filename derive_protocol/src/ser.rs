@@ -29,7 +29,7 @@ pub(crate) fn generate_serialize(input: &syn::DeriveInput) -> TokenStream {
     }
 }
 
-fn get_serialized_fields(data: &Data, identifier: &Ident, id_checker: &mut IdChecker) -> Vec<TokenStream> {
+fn get_serialized_fields(data: &Data, _identifier: &Ident, id_checker: &mut IdChecker) -> Vec<TokenStream> {
     match data {
         Data::Struct(my_struct) => {
             let fields = &my_struct.fields;
@@ -72,7 +72,6 @@ fn get_serialized_fields(data: &Data, identifier: &Ident, id_checker: &mut IdChe
                         serializer.write_undefined();
                     }
                 } else {
-                    let len = field_token_stream.len();
                     quote! {
                         #(#field_token_stream)*
                     }
@@ -113,7 +112,7 @@ fn get_serialized_fields(data: &Data, identifier: &Ident, id_checker: &mut IdChe
                 }
             }]
         }
-        Data::Union(my_union) => {
+        Data::Union(_my_union) => {
             Vec::new()
         }
     }
@@ -225,7 +224,7 @@ fn get_field_amount(data: &Data) -> Option<usize> {
         Data::Struct(my_struct) => {
             Some(my_struct.fields.len())
         }
-        Data::Enum(my_enum) => {
+        Data::Enum(_) => {
             None
         }
         Data::Union(my_union) => {

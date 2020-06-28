@@ -1,5 +1,3 @@
-use crate::{Serialize, Serializer};
-
 // mod o;
 
 #[cfg(test)]
@@ -8,7 +6,7 @@ mod tests {
 
     use cbor_enhanced_derive_protocol::*;
 
-    use crate::{CborError, Deserialize, Deserializer, Serialize, Serializer, to_vec};
+    use crate::{CborError, Deserialize, Deserializer, Serialize, to_vec};
 
     #[derive(cbor_protocol, Clone, Eq, PartialEq, Debug)]
     #[reserved(5, 6, 7)]

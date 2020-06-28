@@ -7,9 +7,6 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 
-use proc_macro2::{Group, Ident, Literal, TokenTree};
-use syn::{Attribute, Data, Fields, Index};
-use syn::spanned::Spanned;
 use syn::export::Debug;
 
 mod ser;
