@@ -8,18 +8,16 @@ extern crate syn;
 
 use proc_macro::TokenStream;
 
-use syn::export::Debug;
-
 mod de;
 mod ser;
 
-#[derive(Clone, Debug)]
-pub(crate) enum Either<A: Clone + Debug, B: Clone + Debug> {
+#[derive(Clone)]
+pub(crate) enum Either<A: Clone, B: Clone> {
     A(A),
     B(B),
 }
 
-impl<A: Clone + Debug, B: Clone + Debug> Either<A, B> {
+impl<A: Clone, B: Clone> Either<A, B> {
     pub fn is_a(&self) -> bool {
         match self {
             Either::A(_) => true,

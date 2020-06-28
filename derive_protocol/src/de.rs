@@ -430,7 +430,7 @@ fn get_id_from_attribute(attribute: &Attribute) -> usize {
     id
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct DeclaredField {
     render_name: Ident,
     identifier: Either<Ident, Index>,
