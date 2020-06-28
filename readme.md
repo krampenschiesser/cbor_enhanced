@@ -29,6 +29,24 @@ In addition several iana tags are supported but need to be activated via feature
 
 * Zero-Copy deserialization
 * Support for various iana tags
+* custom derive macro for serializing structs
+
+## Derive macro
+
+Deriving cbor_protocol enables you to serialize/deserialize a struct into a Map<uint,Value>
+Where the keys for the map are the property id's.
+
+```rust
+#[derive(cbor_protocol, Clone, Eq, PartialEq, Debug)]
+#[reserved(5, 6, 7)]
+struct BlaStruct {
+    #[id(1)]
+    #[default("none")]
+    name: String,
+    #[id(2)]
+    value: i32,
+}
+```
 
 ## License
 
