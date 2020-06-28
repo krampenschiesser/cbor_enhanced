@@ -5,6 +5,11 @@ authors = ["Christian Loehnert"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 description = "Derive macro implementation for cbor_enhanced"
+homepage = "https://github.com/krampenschiesser/cbor_enhanced"
+repository = "https://github.com/krampenschiesser/cbor_enhanced"
+readme="../readme.md"
+documentation = "https://docs.rs/cbor_enhanced"
+
 [lib]
 proc-macro = true
 
