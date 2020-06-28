@@ -43,6 +43,11 @@ impl AsRef<[u8]> for Serializer {
         self.bytes.as_ref()
     }
 }
+impl Default for Serializer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl Serializer {
     pub fn new() -> Self {
@@ -79,7 +84,7 @@ impl Serializer {
         self.write_u64_internal(value, 0u8);
     }
 
-    fn write_u64_internal(&mut self, value: u64, mask: u8) -> () {
+    fn write_u64_internal(&mut self, value: u64, mask: u8) {
         let slice: [u8; 8] = value.to_be_bytes();
         let option = slice
             .iter()

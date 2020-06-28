@@ -28,7 +28,7 @@ impl<'de> Deserializer {
         data: &'de [u8],
     ) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
         let (string, remaining) = self.take_text(data, true)?;
-        let date_time = DateTime::parse_from_rfc3339(string.as_ref())
+        let date_time = DateTime::parse_from_rfc3339(string)
             .map_err(|_| CborError::DateTimeParsingFailed(string.to_string()))?;
         Ok((date_time, remaining))
     }
@@ -53,7 +53,7 @@ impl<'de> Deserializer {
             Type::Special(_) => {
                 let (float, remaining) = self.take_float(data, true)?;
                 let seconds = float.trunc() as i64;
-                let nanos = (float.fract() * 1000_000_000f64).trunc() as u32;
+                let nanos = (float.fract() * 1_000_000_000_f64).trunc() as u32;
                 let time = Utc.timestamp(seconds, nanos);
                 let fix_offset = time.timezone().fix();
                 Ok((time.with_timezone(&fix_offset), remaining))
@@ -87,7 +87,7 @@ impl<'de> Deserializer {
                     let (precision, ret) = self.take_unsigned(remaining, true)?;
                     if precision_level == 0 {
                         precision_level = 1;
-                        precision_ns = precision * 1000_000;
+                        precision_ns = precision * 1_000_000;
                     }
                     remaining = ret;
                 }

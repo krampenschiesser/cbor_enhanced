@@ -96,7 +96,7 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
     fields.iter().filter(|f| f.variant.is_some()).for_each(|f| {
         variants
             .entry(f.variant.clone().unwrap())
-            .or_insert(Vec::new())
+            .or_insert_with(Vec::new)
             .push(f.clone())
     });
     let variants: Vec<_> = variants
@@ -136,7 +136,7 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
         })
         .collect();
 
-    let instantiation = if variants.len() > 0 {
+    let instantiation = if !variants.is_empty() {
         quote!(#(#variants)*)
     } else if fields.iter().any(|f| f.identifier.is_b()) {
         quote! {
@@ -190,7 +190,7 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
     q
 }
 
-fn check_fields(fields: &Vec<DeclaredField>, identifier: &Ident) -> Vec<TokenStream> {
+fn check_fields(fields: &[DeclaredField], identifier: &Ident) -> Vec<TokenStream> {
     fields
         .iter()
         .map(|f| {
@@ -221,7 +221,7 @@ fn check_fields(fields: &Vec<DeclaredField>, identifier: &Ident) -> Vec<TokenStr
         .collect()
 }
 
-fn instantiate_fields(fields: &Vec<DeclaredField>) -> Vec<TokenStream> {
+fn instantiate_fields(fields: &[DeclaredField]) -> Vec<TokenStream> {
     fields
         .iter()
         .map(|f| {
@@ -243,13 +243,9 @@ fn instantiate_fields(fields: &Vec<DeclaredField>) -> Vec<TokenStream> {
 }
 
 fn find_de_lifetime(generics: &Generics) -> Option<&LifetimeDef> {
-    generics.lifetimes().find(|lifetime| {
-        if lifetime.lifetime == Lifetime::new("'de", lifetime.span()) {
-            true
-        } else {
-            false
-        }
-    })
+    generics
+        .lifetimes()
+        .find(|lifetime| lifetime.lifetime == Lifetime::new("'de", lifetime.span()))
 }
 
 fn find_first_lifetime(generics: &Generics) -> Option<&LifetimeDef> {
@@ -274,14 +270,14 @@ fn get_generics(declared: &Generics) -> (Generics, Generics, Generics, LifetimeD
     params_trait.push(GenericParam::from(lifetime_to_use.clone()));
 
     let main_generics = Generics {
-        gt_token: declared.gt_token.clone(),
-        lt_token: declared.lt_token.clone(),
+        gt_token: declared.gt_token,
+        lt_token: declared.lt_token,
         where_clause: None,
         params,
     };
     let trait_generics = Generics {
-        gt_token: declared.gt_token.clone(),
-        lt_token: declared.lt_token.clone(),
+        gt_token: declared.gt_token,
+        lt_token: declared.lt_token,
         where_clause: None,
         params: params_trait,
     };
@@ -291,10 +287,10 @@ fn get_generics(declared: &Generics) -> (Generics, Generics, Generics, LifetimeD
         main_generics,
         trait_generics,
         type_generics,
-        lifetime_to_use.clone(),
+        lifetime_to_use,
     )
 }
-
+#[allow(clippy::single_match)]
 fn get_empty_variants(data: &Data) -> Vec<DeclaredEmptyVariant> {
     let mut ret = Vec::new();
     match data {
@@ -354,7 +350,7 @@ fn transform_field(pos: usize, f: &Field, variant: Option<&Variant>) -> Declared
         .map(|i| Either::A(i.clone()))
         .unwrap_or_else(|| {
             Either::B(Index {
-                span: f.span().clone(),
+                span: f.span(),
                 index: pos as u32,
             })
         });
@@ -430,7 +426,7 @@ fn get_id_from_attribute(attribute: &Attribute) -> usize {
     let id = id
         .to_string()
         .parse::<usize>()
-        .expect(format!("Could not parse ID from string {}", id).as_str());
+        .unwrap_or_else(|e| panic!("Could not parse ID from string {}, {}", id, e));
     id
 }
 
@@ -526,7 +522,7 @@ fn get_special_slice_token(reference: &TypeReference) -> Option<TokenStream> {
                             .emit();
                         panic!("Illegal slice type");
                     } else {
-                        return Some(token);
+                        Some(token)
                     }
                 }
                 _ => {
@@ -553,9 +549,9 @@ fn get_special_slice_token(reference: &TypeReference) -> Option<TokenStream> {
                 }
             }
             if !valid {
-                return None;
+                None
             } else {
-                return Some(token);
+                Some(token)
             }
         }
         _ => {

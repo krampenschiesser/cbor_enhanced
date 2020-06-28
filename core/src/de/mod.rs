@@ -54,7 +54,11 @@ pub struct Deserializer {
     //#[cfg(feature = "iana_string_ref")]
 //string_references: Vec<Vec<&str>>
 }
-
+impl Default for Deserializer {
+    fn default() -> Self {
+        Deserializer::new()
+    }
+}
 impl<'de> Deserializer {
     pub fn new() -> Self {
         Self {}
@@ -174,13 +178,13 @@ impl<'de> Deserializer {
                 #[cfg(feature = "iana_numbers")]
                 Special::F16 => be_u16(remaining)
                     .map(|v| (f16::from_bits(v.1).to_f64(), v.0))
-                    .map_err(|e| CborError::from(e)),
+                    .map_err(CborError::from),
                 Special::F32 => be_f32(remaining)
                     .map(|v| (v.1 as f64, v.0))
-                    .map_err(|e| CborError::from(e)),
+                    .map_err(CborError::from),
                 Special::F64 => be_f64(remaining)
                     .map(|v| (v.1 as f64, v.0))
-                    .map_err(|e| CborError::from(e)),
+                    .map_err(CborError::from),
                 _ => Err(CborError::ExpectBool(special)),
             },
             _ => Err(CborError::ExpectSpecial(cbor_type)),

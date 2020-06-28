@@ -44,7 +44,7 @@ fn get_serialized_fields(
                 .variants
                 .iter()
                 .map(|v| {
-                    let no_fields = v.fields.len() == 0;
+                    let no_fields = v.fields.is_empty();
 
                     let field_token_stream = serialize_fields(&v.fields, true, id_checker);
                     let field_names = get_field_names(&v.fields);
@@ -58,7 +58,7 @@ fn get_serialized_fields(
                         } else {
                             v.span()
                                 .unwrap()
-                                .error(format!("No #[id(?)] attribute given"))
+                                .error("No #[id(?)] attribute given".to_string())
                                 .emit();
                             unreachable!()
                         }
@@ -152,7 +152,7 @@ fn get_field_names(fields: &Fields) -> Option<Either<Vec<Ident>, Vec<Index>>> {
                 .iter()
                 .enumerate()
                 .map(|(field_id, f)| Index {
-                    span: f.span().clone(),
+                    span: f.span(),
                     index: field_id as u32,
                 })
                 .collect(),
@@ -181,7 +181,7 @@ fn serialize_fields(
                 let id: Literal = syn::parse2(id.stream()).unwrap();
 
                 let index = Index {
-                    span: f.span().clone(),
+                    span: f.span(),
                     index: field_id as u32,
                 };
                 let either = if let Some(ident) = &f.ident {
@@ -189,11 +189,11 @@ fn serialize_fields(
                 } else {
                     Either::B(index)
                 };
-                (id, either, default_attribute.clone())
+                (id, either, default_attribute)
             } else {
                 f.span()
                     .unwrap()
-                    .error(format!("No #[id(?)] attribute given"))
+                    .error("No #[id(?)] attribute given".to_string())
                     .emit();
                 unreachable!()
             }
@@ -242,17 +242,15 @@ fn serialize_fields(
                         }
                     }
                 }
+            } else if is_enum {
+                quote! {
+                    serializer.write_u64(#id_literal);
+                    #identifier.serialize(serializer);
+                }
             } else {
-                if is_enum {
-                    quote! {
-                        serializer.write_u64(#id_literal);
-                        #identifier.serialize(serializer);
-                    }
-                } else {
-                    quote! {
-                        serializer.write_u64(#id_literal);
-                        self.#identifier.serialize(serializer);
-                    }
+                quote! {
+                    serializer.write_u64(#id_literal);
+                    self.#identifier.serialize(serializer);
                 }
             }
         })
@@ -289,7 +287,7 @@ fn get_reserved_ids(attrs: &[Attribute]) -> Vec<usize> {
         vec
     });
 
-    found.unwrap_or(Vec::new())
+    found.unwrap_or_default()
 }
 
 struct IdChecker {

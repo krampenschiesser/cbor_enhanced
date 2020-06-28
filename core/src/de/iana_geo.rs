@@ -61,15 +61,12 @@ impl<'de> Deserializer {
 fn convert_value(value: Value) -> Result<f64, CborError> {
     use num_traits::*;
     match value {
-        Value::I128(val) => Ok(
-            f64::from_i128(val).ok_or(CborError::InvalidNumberConversion(format!(
-                "Cannot convert {} to f64",
-                val
-            )))?,
-        ),
-        Value::U64(val) => Ok(f64::from_u64(val).ok_or(CborError::InvalidNumberConversion(
-            format!("Cannot convert {} to f64", val),
-        ))?),
+        Value::I128(val) => Ok(f64::from_i128(val).ok_or_else(|| {
+            CborError::InvalidNumberConversion(format!("Cannot convert {} to f64", val))
+        })?),
+        Value::U64(val) => Ok(f64::from_u64(val).ok_or_else(|| {
+            CborError::InvalidNumberConversion(format!("Cannot convert {} to f64", val))
+        })?),
         Value::F64(val) => Ok(val),
         val => Err(CborError::ExpectNumber(format!("{:?}", val))),
     }

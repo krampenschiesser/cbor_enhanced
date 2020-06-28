@@ -1,3 +1,4 @@
+#![allow(clippy::len_without_is_empty)]
 use nom::number::complete::{be_u16, be_u64, be_u8};
 use nom::number::streaming::be_u32;
 
@@ -23,16 +24,16 @@ impl ByteSize {
         match self {
             ByteSize::Size1Byte => be_u8::<CborError>(data)
                 .map(|v| (v.0, v.1 as usize))
-                .map_err(|e| CborError::from(e)),
+                .map_err(CborError::from),
             ByteSize::Size2Bytes => be_u16::<CborError>(data)
                 .map(|v| (v.0, v.1 as usize))
-                .map_err(|e| CborError::from(e)),
+                .map_err(CborError::from),
             ByteSize::Size4Bytes => be_u32::<CborError>(data)
                 .map(|v| (v.0, v.1 as usize))
-                .map_err(|e| CborError::from(e)),
+                .map_err(CborError::from),
             ByteSize::Size8Bytes => be_u64::<CborError>(data)
                 .map(|v| (v.0, v.1 as usize))
-                .map_err(|e| CborError::from(e)),
+                .map_err(CborError::from),
         }
     }
 
@@ -88,14 +89,14 @@ impl Integer<u64> {
             Integer::Sized(size) => match size {
                 ByteSize::Size1Byte => be_u8::<CborError>(data)
                     .map(|v| (v.0, v.1 as u64))
-                    .map_err(|e| CborError::from(e)),
+                    .map_err(CborError::from),
                 ByteSize::Size2Bytes => be_u16::<CborError>(data)
                     .map(|v| (v.0, v.1 as u64))
-                    .map_err(|e| CborError::from(e)),
+                    .map_err(CborError::from),
                 ByteSize::Size4Bytes => be_u32::<CborError>(data)
                     .map(|v| (v.0, v.1 as u64))
-                    .map_err(|e| CborError::from(e)),
-                ByteSize::Size8Bytes => be_u64::<CborError>(data).map_err(|e| CborError::from(e)),
+                    .map_err(CborError::from),
+                ByteSize::Size8Bytes => be_u64::<CborError>(data).map_err(CborError::from),
             },
         }
     }
@@ -115,16 +116,16 @@ impl Integer<i128> {
             Integer::Sized(size) => match size {
                 ByteSize::Size1Byte => be_u8::<CborError>(data)
                     .map(|v| (v.0, -1i128 - v.1 as i128))
-                    .map_err(|e| CborError::from(e)),
+                    .map_err(CborError::from),
                 ByteSize::Size2Bytes => be_u16::<CborError>(data)
                     .map(|v| (v.0, -1i128 - v.1 as i128))
-                    .map_err(|e| CborError::from(e)),
+                    .map_err(CborError::from),
                 ByteSize::Size4Bytes => be_u32::<CborError>(data)
                     .map(|v| (v.0, -1i128 - v.1 as i128))
-                    .map_err(|e| CborError::from(e)),
+                    .map_err(CborError::from),
                 ByteSize::Size8Bytes => be_u64::<CborError>(data)
                     .map(|v| (v.0, -1i128 - v.1 as i128))
-                    .map_err(|e| CborError::from(e)),
+                    .map_err(CborError::from),
             },
         }
     }
@@ -243,7 +244,7 @@ impl Type {
     }
     pub fn to_byte(self) -> u8 {
         match self {
-            Type::UnsignedInteger(val) => 0u8 | val.to_byte(),
+            Type::UnsignedInteger(val) => val.to_byte(),
             Type::NegativeInteger(val) => 0b0010_0000 | val.to_byte(),
             Type::Bytes(length) => 0b0100_0000 | length.to_byte(),
             Type::Text(length) => 0b0110_0000 | length.to_byte(),

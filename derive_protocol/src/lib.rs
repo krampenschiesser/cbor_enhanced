@@ -1,4 +1,5 @@
 #![feature(proc_macro_diagnostic)]
+#![allow(clippy::let_and_return)]
 
 extern crate proc_macro;
 #[macro_use]
