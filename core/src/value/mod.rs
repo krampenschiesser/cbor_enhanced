@@ -1,5 +1,5 @@
-use crate::ReducedSpecial;
 use crate::types::IanaTag;
+use crate::ReducedSpecial;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Value<'a> {

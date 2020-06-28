@@ -14,7 +14,9 @@ impl Serializer {
         let int = if int.is_negative() {
             let int: BigInt = int + 1;
             int.abs()
-        } else { int };
+        } else {
+            int
+        };
 
         self.write_bytes(int.to_bytes_be().1.as_slice());
     }

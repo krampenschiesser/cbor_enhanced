@@ -1,4 +1,4 @@
-use chrono::{DateTime, FixedOffset, Offset, Timelike, TimeZone, Utc};
+use chrono::{DateTime, FixedOffset, Offset, TimeZone, Timelike, Utc};
 use nom::number::complete::be_u8;
 
 use crate::de::{Deserializer, Remaining};
@@ -6,22 +6,35 @@ use crate::error::CborError;
 use crate::types::{IanaTag, Type};
 
 impl<'de> Deserializer {
-    pub fn take_timestamp(&self, data: &'de [u8]) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
+    pub fn take_timestamp(
+        &self,
+        data: &'de [u8],
+    ) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
         let (tag, remaining) = self.take_tag(data)?;
         match tag {
             IanaTag::DateTimeString => self.take_date_time_string(remaining),
             IanaTag::EpochBasedTime => self.take_epoch_based_time(remaining),
             IanaTag::ExtendedTime => self.take_extended_time(remaining),
-            _ => Err(CborError::InvalidTags(tag, &[IanaTag::DateTimeString, IanaTag::EpochBasedTime]))
+            _ => Err(CborError::InvalidTags(
+                tag,
+                &[IanaTag::DateTimeString, IanaTag::EpochBasedTime],
+            )),
         }
     }
 
-    fn take_date_time_string(&self, data: &'de [u8]) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
+    fn take_date_time_string(
+        &self,
+        data: &'de [u8],
+    ) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
         let (string, remaining) = self.take_text(data, true)?;
-        let date_time = DateTime::parse_from_rfc3339(string.as_ref()).map_err(|_| CborError::DateTimeParsingFailed(string.to_string()))?;
+        let date_time = DateTime::parse_from_rfc3339(string.as_ref())
+            .map_err(|_| CborError::DateTimeParsingFailed(string.to_string()))?;
         Ok((date_time, remaining))
     }
-    fn take_epoch_based_time(&self, data: &'de [u8]) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
+    fn take_epoch_based_time(
+        &self,
+        data: &'de [u8],
+    ) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
         let (cbor_type, _) = self.take_type(data, true)?;
         match cbor_type {
             Type::UnsignedInteger(_) => {
@@ -47,7 +60,10 @@ impl<'de> Deserializer {
             _ => Err(CborError::InvalidTimeType(cbor_type)),
         }
     }
-    fn take_extended_time(&self, data: &'de [u8]) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
+    fn take_extended_time(
+        &self,
+        data: &'de [u8],
+    ) -> Result<(DateTime<FixedOffset>, Remaining<'de>), CborError> {
         let (length, remaining) = self.take_map_def(data, true)?;
         let length = length.ok_or_else(|| CborError::ExpectNonInfinite)?;
 
@@ -100,7 +116,9 @@ impl<'de> Deserializer {
         }
         if let Some(mut time) = time {
             if precision_level > 0 {
-                time = time.with_nanosecond(precision_ns as u32).ok_or(CborError::Unknown("Could not convert time for tag 1001"))?;
+                time = time
+                    .with_nanosecond(precision_ns as u32)
+                    .ok_or(CborError::Unknown("Could not convert time for tag 1001"))?;
             }
             Ok((time, remaining))
         } else {

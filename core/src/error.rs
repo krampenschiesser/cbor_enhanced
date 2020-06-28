@@ -48,10 +48,22 @@ pub enum CborError {
     InvalidTag(IanaTag, IanaTag),
     #[fail(display = "Wrong endieness, expected tag {} but got {}", expected, got)]
     WrongEndianness { expected: IanaTag, got: IanaTag },
-    #[fail(display = "Invalid array length, needed multiple of {} but got length: {}", needed_multiple_of, got)]
-    InvalidArrayMultiple { needed_multiple_of: usize, got: usize },
-    #[fail(display = "Invalid array length, expected {:?} but got length: {}", expected, got)]
-    InvalidArrayLength { expected: &'static [usize], got: usize },
+    #[fail(
+        display = "Invalid array length, needed multiple of {} but got length: {}",
+        needed_multiple_of, got
+    )]
+    InvalidArrayMultiple {
+        needed_multiple_of: usize,
+        got: usize,
+    },
+    #[fail(
+        display = "Invalid array length, expected {:?} but got length: {}",
+        expected, got
+    )]
+    InvalidArrayLength {
+        expected: &'static [usize],
+        got: usize,
+    },
     #[fail(display = "Failed to transmute slice: {}", _0)]
     TransmutionFailed(String),
 

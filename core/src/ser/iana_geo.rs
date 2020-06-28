@@ -6,7 +6,9 @@ impl Serializer {
     pub fn write_geo(&mut self, coordinate: GeoCoordinate) {
         self.write_tag(IanaTag::GeoCoordinate);
 
-        let len = 2 + coordinate.uncertainty.map(|_| 1).unwrap_or(0) + coordinate.elevation.map(|_| 1).unwrap_or(0);
+        let len = 2
+            + coordinate.uncertainty.map(|_| 1).unwrap_or(0)
+            + coordinate.elevation.map(|_| 1).unwrap_or(0);
         self.write_array_def(len);
 
         self.write_f64(coordinate.latitude);

@@ -1,4 +1,3 @@
-
 use crate::de::{Deserializer, Remaining};
 use crate::error::CborError;
 use crate::types::IanaTag;
@@ -13,13 +12,22 @@ pub struct GeoCoordinate {
 }
 
 impl<'de> Deserializer {
-    pub fn take_geo_coordinate(&self, data: &'de [u8]) -> Result<(GeoCoordinate, Remaining<'de>), CborError> {
+    pub fn take_geo_coordinate(
+        &self,
+        data: &'de [u8],
+    ) -> Result<(GeoCoordinate, Remaining<'de>), CborError> {
         let remaining = self.expect_tag(data, IanaTag::GeoCoordinate)?;
 
         let (array_len, remaining) = self.take_array_def(remaining, true)?;
-        let array_len = array_len.ok_or(CborError::InvalidArrayLength { expected: &[2, 3, 4], got: 0 })?;
+        let array_len = array_len.ok_or(CborError::InvalidArrayLength {
+            expected: &[2, 3, 4],
+            got: 0,
+        })?;
         if array_len < 2 || array_len > 4 {
-            return Err(CborError::InvalidArrayLength { expected: &[2, 3, 4], got: array_len });
+            return Err(CborError::InvalidArrayLength {
+                expected: &[2, 3, 4],
+                got: array_len,
+            });
         }
         let mut remaining = remaining;
 
@@ -36,7 +44,7 @@ impl<'de> Deserializer {
                 1 => longitude = value,
                 2 => elevation = Some(value),
                 3 => uncertainty = Some(value),
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         }
         let coord = GeoCoordinate {
@@ -52,9 +60,16 @@ impl<'de> Deserializer {
 fn convert_value(value: Value) -> Result<f64, CborError> {
     use num_traits::*;
     match value {
-        Value::I128(val) => Ok(f64::from_i128(val).ok_or(CborError::InvalidNumberConversion(format!("Cannot convert {} to f64", val)))?),
-        Value::U64(val) => Ok(f64::from_u64(val).ok_or(CborError::InvalidNumberConversion(format!("Cannot convert {} to f64", val)))?),
+        Value::I128(val) => Ok(
+            f64::from_i128(val).ok_or(CborError::InvalidNumberConversion(format!(
+                "Cannot convert {} to f64",
+                val
+            )))?,
+        ),
+        Value::U64(val) => Ok(f64::from_u64(val).ok_or(CborError::InvalidNumberConversion(
+            format!("Cannot convert {} to f64", val),
+        ))?),
         Value::F64(val) => Ok(val),
-        val => Err(CborError::ExpectNumber(format!("{:?}", val)))
+        val => Err(CborError::ExpectNumber(format!("{:?}", val))),
     }
 }

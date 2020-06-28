@@ -10,7 +10,8 @@ impl<'de> Deserializer {
 
         let remaining = self.expect_tag(data, IanaTag::MimeMessage)?;
         let (text, remaining) = self.take_text(remaining, true)?;
-        let mime = Mime::from_str(text.as_ref()).map_err(|e| CborError::InvalidMimeString(text.to_string(), e.to_string()))?;
+        let mime = Mime::from_str(text.as_ref())
+            .map_err(|e| CborError::InvalidMimeString(text.to_string(), e.to_string()))?;
         Ok((mime, remaining))
     }
 }

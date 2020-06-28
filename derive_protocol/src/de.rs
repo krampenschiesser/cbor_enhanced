@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 
 use proc_macro2::{Group, Ident, Literal, TokenStream};
-use syn::{Attribute, Data, Field, GenericParam, Generics, Index, Lifetime, LifetimeDef, parse2, Path, PathArguments, Type, TypePath, TypeReference,  Variant};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
+use syn::{
+    parse2, Attribute, Data, Field, GenericParam, Generics, Index, Lifetime, LifetimeDef, Path,
+    PathArguments, Type, TypePath, TypeReference, Variant,
+};
 
 use crate::Either;
 
@@ -12,39 +15,41 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
     let (main_generics, trait_generics, type_generics, lifetime) = get_generics(&input.generics);
 
     let empty_variants = get_empty_variants(&input.data);
-    let empty_variants: Vec<_> = empty_variants.iter().map(|ev|{
-        let id = ev.id;
-        let variant = &ev.variant;
-        quote!{
-            else if deserializer.found_contains_any(&found_ids, &[#id]) {
-                #identifier::#variant
+    let empty_variants: Vec<_> = empty_variants
+        .iter()
+        .map(|ev| {
+            let id = ev.id;
+            let variant = &ev.variant;
+            quote! {
+                else if deserializer.found_contains_any(&found_ids, &[#id]) {
+                    #identifier::#variant
+                }
             }
-        }
-    }).collect();
+        })
+        .collect();
     let fields: Vec<DeclaredField> = get_field_declarations(&input.data);
-    let declarations: Vec<_> = fields.iter().map(|f| {
-        let ty = &f.ty;
-        let default = match &f.default {
-            FieldDefault::Option => {
-                quote!(None)
+    let declarations: Vec<_> = fields
+        .iter()
+        .map(|f| {
+            let ty = &f.ty;
+            let default = match &f.default {
+                FieldDefault::Option => quote!(None),
+                FieldDefault::Default => {
+                    let ty = to_non_generic_type(ty);
+                    quote!(Some(#ty::default()))
+                }
+                FieldDefault::NoDefault => quote!(None),
+                FieldDefault::Token(token) => {
+                    let ty = to_non_generic_type(ty);
+                    quote!(Some(#ty::from(#token)))
+                }
+            };
+            let name = &f.render_name;
+            quote! {
+                let mut #name: Option<#ty> = #default;
             }
-            FieldDefault::Default => {
-                let ty = to_non_generic_type(ty);
-                quote!(Some(#ty::default()))
-            }
-            FieldDefault::NoDefault => {
-                quote!(None)
-            }
-            FieldDefault::Token(token) => {
-                let ty = to_non_generic_type(ty);
-                quote!(Some(#ty::from(#token)))
-            }
-        };
-        let name = &f.render_name;
-        quote! {
-            let mut #name: Option<#ty> = #default;
-        }
-    }).collect();
+        })
+        .collect();
     let collect_fields: Vec<_> = fields.iter().map(|f| {
         let field_id = f.id;
         let ty = &f.ty;
@@ -89,40 +94,47 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
 
     let mut variants: HashMap<Ident, Vec<DeclaredField>> = HashMap::new();
     fields.iter().filter(|f| f.variant.is_some()).for_each(|f| {
-        variants.entry(f.variant.clone().unwrap()).or_insert(Vec::new()).push(f.clone())
+        variants
+            .entry(f.variant.clone().unwrap())
+            .or_insert(Vec::new())
+            .push(f.clone())
     });
-    let variants: Vec<_> = variants.iter().enumerate().map(|(index, (variant, fields))| {
-        let ids: Vec<_> = fields.iter().map(|f| f.id).collect();
-        let tuple = fields.iter().any(|f| f.identifier.is_b());
-        let instantiated_fields = instantiate_fields(fields);
-        let checked_fields = check_fields(fields, identifier);
-        let instantiation = if tuple {
-            quote!((#(#instantiated_fields)*))
-        } else {
-            quote!({#(#instantiated_fields)*})
-        };
-        let full = quote! {
-            if deserializer.found_contains_any(&found_ids, &[#(#ids),*]) {
-                #(#checked_fields)*
+    let variants: Vec<_> = variants
+        .iter()
+        .enumerate()
+        .map(|(index, (variant, fields))| {
+            let ids: Vec<_> = fields.iter().map(|f| f.id).collect();
+            let tuple = fields.iter().any(|f| f.identifier.is_b());
+            let instantiated_fields = instantiate_fields(fields);
+            let checked_fields = check_fields(fields, identifier);
+            let instantiation = if tuple {
+                quote!((#(#instantiated_fields)*))
+            } else {
+                quote!({#(#instantiated_fields)*})
+            };
+            let full = quote! {
+                if deserializer.found_contains_any(&found_ids, &[#(#ids),*]) {
+                    #(#checked_fields)*
 
-                #identifier::#variant#instantiation
+                    #identifier::#variant#instantiation
+                }
+            };
+            if index == variants.len() - 1 {
+                let string = format!("Any variant of {}", identifier);
+                quote! {
+                    else #full
+                    #(#empty_variants)*
+                    else {
+                        return Err(CborError::NoValueFound(#string));
+                    };
+                }
+            } else if index > 0 {
+                quote!(else #full)
+            } else {
+                quote!(let retval = #full)
             }
-        };
-        if index == variants.len() - 1 {
-            let string = format!("Any variant of {}", identifier);
-            quote! {
-                else #full
-                #(#empty_variants)*
-                else {
-                    return Err(CborError::NoValueFound(#string));
-                };
-            }
-        } else if index > 0 {
-            quote!(else #full)
-        } else {
-            quote!(let retval = #full)
-        }
-    }).collect();
+        })
+        .collect();
 
     let instantiation = if variants.len() > 0 {
         quote!(#(#variants)*)
@@ -172,53 +184,62 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
             }
         }
     };
-//    if identifier.to_string() == "BlaEnum" {
-//        panic!("{}", q);
-//    }
+    //    if identifier.to_string() == "BlaEnum" {
+    //        panic!("{}", q);
+    //    }
     q
 }
 
 fn check_fields(fields: &Vec<DeclaredField>, identifier: &Ident) -> Vec<TokenStream> {
-    fields.iter().map(|f| {
-        let render_name = &f.render_name;
+    fields
+        .iter()
+        .map(|f| {
+            let render_name = &f.render_name;
 
-        let field_name = match &f.identifier {
-            Either::A(ident) => ident.to_string(),
-            Either::B(index) => index.index.to_string()
-        };
-        let string = if let Some(variant) = &f.variant {
-            let (token_start, token_finish) = if fields.iter().any(|f| f.identifier.is_a()) {
-                ("{", "}")
-            } else {
-                ("(", ")")
+            let field_name = match &f.identifier {
+                Either::A(ident) => ident.to_string(),
+                Either::B(index) => index.index.to_string(),
             };
-            let content = format!("{}::{}{}{}{}", identifier, variant, token_start, field_name, token_finish);
-            quote!(#content)
-        } else {
-            quote!(#field_name)
-        };
-        quote! {
-            deserializer.check_is_some(&#render_name, #string)?;
-        }
-    }).collect()
+            let string = if let Some(variant) = &f.variant {
+                let (token_start, token_finish) = if fields.iter().any(|f| f.identifier.is_a()) {
+                    ("{", "}")
+                } else {
+                    ("(", ")")
+                };
+                let content = format!(
+                    "{}::{}{}{}{}",
+                    identifier, variant, token_start, field_name, token_finish
+                );
+                quote!(#content)
+            } else {
+                quote!(#field_name)
+            };
+            quote! {
+                deserializer.check_is_some(&#render_name, #string)?;
+            }
+        })
+        .collect()
 }
 
 fn instantiate_fields(fields: &Vec<DeclaredField>) -> Vec<TokenStream> {
-    fields.iter().map(|f| {
-        let render_name = &f.render_name;
-        match &f.identifier {
-            Either::A(ident) => {
-                quote! {
-                    #ident: #render_name.unwrap(),
+    fields
+        .iter()
+        .map(|f| {
+            let render_name = &f.render_name;
+            match &f.identifier {
+                Either::A(ident) => {
+                    quote! {
+                        #ident: #render_name.unwrap(),
+                    }
+                }
+                Either::B(_) => {
+                    quote! {
+                        #render_name.unwrap(),
+                    }
                 }
             }
-            Either::B(_) => {
-                quote! {
-                    #render_name.unwrap(),
-                }
-            }
-        }
-    }).collect()
+        })
+        .collect()
 }
 
 fn find_de_lifetime(generics: &Generics) -> Option<&LifetimeDef> {
@@ -252,7 +273,6 @@ fn get_generics(declared: &Generics) -> (Generics, Generics, Generics, LifetimeD
     let mut params_trait = Punctuated::new();
     params_trait.push(GenericParam::from(lifetime_to_use.clone()));
 
-
     let main_generics = Generics {
         gt_token: declared.gt_token.clone(),
         lt_token: declared.lt_token.clone(),
@@ -267,23 +287,32 @@ fn get_generics(declared: &Generics) -> (Generics, Generics, Generics, LifetimeD
     };
     let type_generics: Generics = (*declared).clone();
 
-    (main_generics, trait_generics, type_generics, lifetime_to_use.clone())
+    (
+        main_generics,
+        trait_generics,
+        type_generics,
+        lifetime_to_use.clone(),
+    )
 }
 
 fn get_empty_variants(data: &Data) -> Vec<DeclaredEmptyVariant> {
     let mut ret = Vec::new();
     match data {
         Data::Enum(my_enum) => {
-            my_enum.variants.iter().filter(|v| v.fields.is_empty()).for_each(|v| {
-                let option = v.attrs.iter().find(|a| a.path.is_ident("id"));
-                if let Some(attr) = option {
-                    let id = get_id_from_attribute(attr);
-                    ret.push(DeclaredEmptyVariant {
-                        variant: v.ident.clone(),
-                        id: id as u64,
-                    })
-                }
-            });
+            my_enum
+                .variants
+                .iter()
+                .filter(|v| v.fields.is_empty())
+                .for_each(|v| {
+                    let option = v.attrs.iter().find(|a| a.path.is_ident("id"));
+                    if let Some(attr) = option {
+                        let id = get_id_from_attribute(attr);
+                        ret.push(DeclaredEmptyVariant {
+                            variant: v.ident.clone(),
+                            id: id as u64,
+                        })
+                    }
+                });
         }
         _ => {}
     }
@@ -292,32 +321,43 @@ fn get_empty_variants(data: &Data) -> Vec<DeclaredEmptyVariant> {
 
 fn get_field_declarations(data: &Data) -> Vec<DeclaredField> {
     match data {
-        Data::Enum(my_enum) => {
-            my_enum.variants.iter().map(|v| {
-                v.fields.iter().enumerate().map(|(pos, f)| {
-                    transform_field(pos, f, Some(v))
-                }).collect::<Vec<_>>()
-            }).flat_map(|v| v.into_iter()).collect()
-        }
-        Data::Struct(my_struct) => {
-            my_struct.fields.iter().enumerate().map(|(pos, f)| transform_field(pos, f, None)).collect()
-        }
+        Data::Enum(my_enum) => my_enum
+            .variants
+            .iter()
+            .map(|v| {
+                v.fields
+                    .iter()
+                    .enumerate()
+                    .map(|(pos, f)| transform_field(pos, f, Some(v)))
+                    .collect::<Vec<_>>()
+            })
+            .flat_map(|v| v.into_iter())
+            .collect(),
+        Data::Struct(my_struct) => my_struct
+            .fields
+            .iter()
+            .enumerate()
+            .map(|(pos, f)| transform_field(pos, f, None))
+            .collect(),
         Data::Union(_union) => {
             unimplemented!("union field declarations");
         }
     }
 }
 
-
 fn transform_field(pos: usize, f: &Field, variant: Option<&Variant>) -> DeclaredField {
     let id = get_id(f, None);
     let default = get_default(f);
-    let either = f.ident.as_ref().map(|i| Either::A(i.clone())).unwrap_or_else(|| {
-        Either::B(Index {
-            span: f.span().clone(),
-            index: pos as u32,
-        })
-    });
+    let either = f
+        .ident
+        .as_ref()
+        .map(|i| Either::A(i.clone()))
+        .unwrap_or_else(|| {
+            Either::B(Index {
+                span: f.span().clone(),
+                index: pos as u32,
+            })
+        });
     DeclaredField {
         ty: f.ty.clone(),
         render_name: Ident::new(&format!("t_{}", id), f.span()),
@@ -337,25 +377,27 @@ fn get_default(field: &Field) -> FieldDefault {
             let res = parse2::<Group>(attribute.tokens.clone());
             match res {
                 Ok(group) => FieldDefault::Token(group.stream()),
-                Err(_) => FieldDefault::Token(attribute.tokens.clone())
+                Err(_) => FieldDefault::Token(attribute.tokens.clone()),
             }
         }
     } else {
         match &field.ty {
             Type::Path(p) => {
                 let option = p.path.segments.iter().last();
-                option.map(|s| {
-                    let identifier_formatted = format!("{}", s.ident);
-                    if is_option(identifier_formatted.as_str()) {
-                        FieldDefault::Option
-                    } else if is_default_allowed(identifier_formatted.as_str()) {
-                        FieldDefault::Default
-                    } else {
-                        FieldDefault::NoDefault
-                    }
-                }).unwrap_or(FieldDefault::NoDefault)
+                option
+                    .map(|s| {
+                        let identifier_formatted = format!("{}", s.ident);
+                        if is_option(identifier_formatted.as_str()) {
+                            FieldDefault::Option
+                        } else if is_default_allowed(identifier_formatted.as_str()) {
+                            FieldDefault::Default
+                        } else {
+                            FieldDefault::NoDefault
+                        }
+                    })
+                    .unwrap_or(FieldDefault::NoDefault)
             }
-            _ => FieldDefault::NoDefault
+            _ => FieldDefault::NoDefault,
         }
     }
 }
@@ -373,7 +415,11 @@ fn get_id(field: &Field, variant: Option<&Variant>) -> usize {
             panic!("no id found");
         }
     } else {
-        field.span().unwrap().error("Could not find ID attribute").emit();
+        field
+            .span()
+            .unwrap()
+            .error("Could not find ID attribute")
+            .emit();
         panic!("No id found");
     }
 }
@@ -381,7 +427,10 @@ fn get_id(field: &Field, variant: Option<&Variant>) -> usize {
 fn get_id_from_attribute(attribute: &Attribute) -> usize {
     let id: Group = syn::parse2(attribute.tokens.clone()).unwrap();
     let id: Literal = syn::parse2(id.stream()).unwrap();
-    let id = id.to_string().parse::<usize>().expect(format!("Could not parse ID from string {}", id).as_str());
+    let id = id
+        .to_string()
+        .parse::<usize>()
+        .expect(format!("Could not parse ID from string {}", id).as_str());
     id
 }
 
@@ -432,7 +481,7 @@ fn is_default_allowed(string: &str) -> bool {
         "bool" => true,
         "String" => true,
         "&'static str" => true,
-        _ => false
+        _ => false,
     }
 }
 
@@ -448,10 +497,7 @@ fn to_non_generic_type(ty: &Type) -> Type {
     path.segments.iter_mut().for_each(|s| {
         s.arguments = PathArguments::None;
     });
-    let path = TypePath {
-        path,
-        qself: None,
-    };
+    let path = TypePath { path, qself: None };
     Type::Path(path)
 }
 
@@ -474,14 +520,22 @@ fn get_special_slice_token(reference: &TypeReference) -> Option<TokenStream> {
                         }
                     }
                     if !valid {
-                        path.span().unwrap().error("Illegal slice type, only &[u8] is supported").emit();
+                        path.span()
+                            .unwrap()
+                            .error("Illegal slice type, only &[u8] is supported")
+                            .emit();
                         panic!("Illegal slice type");
                     } else {
                         return Some(token);
                     }
                 }
                 _ => {
-                    reference.elem.span().unwrap().error("Non serializable type 1").emit();
+                    reference
+                        .elem
+                        .span()
+                        .unwrap()
+                        .error("Non serializable type 1")
+                        .emit();
                     panic!("Non serializable type 1")
                 }
             }
@@ -505,7 +559,12 @@ fn get_special_slice_token(reference: &TypeReference) -> Option<TokenStream> {
             }
         }
         _ => {
-            reference.elem.span().unwrap().error("Non serializable type 2").emit();
+            reference
+                .elem
+                .span()
+                .unwrap()
+                .error("Non serializable type 2")
+                .emit();
             panic!("Non serializable type 2")
         }
     }

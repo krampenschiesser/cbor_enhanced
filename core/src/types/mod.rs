@@ -21,10 +21,18 @@ pub enum ByteSize {
 impl ByteSize {
     pub fn read<'de>(&self, data: &'de [u8]) -> Result<(&'de [u8], usize), CborError> {
         match self {
-            ByteSize::Size1Byte => be_u8::<CborError>(data).map(|v| (v.0, v.1 as usize)).map_err(|e| CborError::from(e)),
-            ByteSize::Size2Bytes => be_u16::<CborError>(data).map(|v| (v.0, v.1 as usize)).map_err(|e| CborError::from(e)),
-            ByteSize::Size4Bytes => be_u32::<CborError>(data).map(|v| (v.0, v.1 as usize)).map_err(|e| CborError::from(e)),
-            ByteSize::Size8Bytes => be_u64::<CborError>(data).map(|v| (v.0, v.1 as usize)).map_err(|e| CborError::from(e)),
+            ByteSize::Size1Byte => be_u8::<CborError>(data)
+                .map(|v| (v.0, v.1 as usize))
+                .map_err(|e| CborError::from(e)),
+            ByteSize::Size2Bytes => be_u16::<CborError>(data)
+                .map(|v| (v.0, v.1 as usize))
+                .map_err(|e| CborError::from(e)),
+            ByteSize::Size4Bytes => be_u32::<CborError>(data)
+                .map(|v| (v.0, v.1 as usize))
+                .map_err(|e| CborError::from(e)),
+            ByteSize::Size8Bytes => be_u64::<CborError>(data)
+                .map(|v| (v.0, v.1 as usize))
+                .map_err(|e| CborError::from(e)),
         }
     }
 
@@ -71,20 +79,24 @@ impl Integer<u64> {
     pub fn to_byte(&self) -> u8 {
         match self {
             Integer::Sized(size) => size.to_byte(),
-            Integer::Immediate(val) => *val as u8
+            Integer::Immediate(val) => *val as u8,
         }
     }
     pub fn take_value<'de>(&self, data: &'de [u8]) -> Result<(Remaining<'de>, u64), CborError> {
         match self {
             Integer::Immediate(val) => Ok((data, (*val) as u64)),
-            Integer::Sized(size) => {
-                match size {
-                    ByteSize::Size1Byte => be_u8::<CborError>(data).map(|v| (v.0, v.1 as u64)).map_err(|e| CborError::from(e)),
-                    ByteSize::Size2Bytes => be_u16::<CborError>(data).map(|v| (v.0, v.1 as u64)).map_err(|e| CborError::from(e)),
-                    ByteSize::Size4Bytes => be_u32::<CborError>(data).map(|v| (v.0, v.1 as u64)).map_err(|e| CborError::from(e)),
-                    ByteSize::Size8Bytes => be_u64::<CborError>(data).map_err(|e| CborError::from(e)),
-                }
-            }
+            Integer::Sized(size) => match size {
+                ByteSize::Size1Byte => be_u8::<CborError>(data)
+                    .map(|v| (v.0, v.1 as u64))
+                    .map_err(|e| CborError::from(e)),
+                ByteSize::Size2Bytes => be_u16::<CborError>(data)
+                    .map(|v| (v.0, v.1 as u64))
+                    .map_err(|e| CborError::from(e)),
+                ByteSize::Size4Bytes => be_u32::<CborError>(data)
+                    .map(|v| (v.0, v.1 as u64))
+                    .map_err(|e| CborError::from(e)),
+                ByteSize::Size8Bytes => be_u64::<CborError>(data).map_err(|e| CborError::from(e)),
+            },
         }
     }
 }
@@ -93,23 +105,27 @@ impl Integer<i128> {
     pub fn to_byte(&self) -> u8 {
         match self {
             Integer::Sized(size) => size.to_byte(),
-            Integer::Immediate(val) => {
-                (val + 1).abs() as u8
-            }
+            Integer::Immediate(val) => (val + 1).abs() as u8,
         }
     }
 
     pub fn take_value<'de>(&self, data: &'de [u8]) -> Result<(Remaining<'de>, i128), CborError> {
         match self {
             Integer::Immediate(val) => Ok((data, (*val) as i128)),
-            Integer::Sized(size) => {
-                match size {
-                    ByteSize::Size1Byte => be_u8::<CborError>(data).map(|v| (v.0, -1i128 - v.1 as i128)).map_err(|e| CborError::from(e)),
-                    ByteSize::Size2Bytes => be_u16::<CborError>(data).map(|v| (v.0, -1i128 - v.1 as i128)).map_err(|e| CborError::from(e)),
-                    ByteSize::Size4Bytes => be_u32::<CborError>(data).map(|v| (v.0, -1i128 - v.1 as i128)).map_err(|e| CborError::from(e)),
-                    ByteSize::Size8Bytes => be_u64::<CborError>(data).map(|v| (v.0, -1i128 - v.1 as i128)).map_err(|e| CborError::from(e)),
-                }
-            }
+            Integer::Sized(size) => match size {
+                ByteSize::Size1Byte => be_u8::<CborError>(data)
+                    .map(|v| (v.0, -1i128 - v.1 as i128))
+                    .map_err(|e| CborError::from(e)),
+                ByteSize::Size2Bytes => be_u16::<CborError>(data)
+                    .map(|v| (v.0, -1i128 - v.1 as i128))
+                    .map_err(|e| CborError::from(e)),
+                ByteSize::Size4Bytes => be_u32::<CborError>(data)
+                    .map(|v| (v.0, -1i128 - v.1 as i128))
+                    .map_err(|e| CborError::from(e)),
+                ByteSize::Size8Bytes => be_u64::<CborError>(data)
+                    .map(|v| (v.0, -1i128 - v.1 as i128))
+                    .map_err(|e| CborError::from(e)),
+            },
         }
     }
 }
@@ -122,7 +138,10 @@ pub enum Length {
 }
 
 impl Length {
-    pub fn take_length_to_read<'de>(&self, data: &'de [u8]) -> Result<(&'de [u8], Option<usize>), CborError> {
+    pub fn take_length_to_read<'de>(
+        &self,
+        data: &'de [u8],
+    ) -> Result<(&'de [u8], Option<usize>), CborError> {
         match self {
             Length::Sized(val) => Ok((data, Some(*val))),
             Length::AdditionalBytes(size) => size.read(data).map(|v| (v.0, Some(v.1))),
@@ -169,7 +188,13 @@ impl Special {
     }
     pub fn to_byte(&self) -> u8 {
         match self {
-            Special::Bool(val) => if *val { 21 } else { 20 },
+            Special::Bool(val) => {
+                if *val {
+                    21
+                } else {
+                    20
+                }
+            }
             Special::Null => 22,
             Special::Undefined => 23,
             #[cfg(feature = "iana_numbers")]
@@ -213,17 +238,13 @@ impl Type {
     pub fn is_tag(&self) -> bool {
         match self {
             Type::Tag(_) => true,
-            _ => false
+            _ => false,
         }
     }
     pub fn to_byte(self) -> u8 {
         match self {
-            Type::UnsignedInteger(val) => {
-                0u8 | val.to_byte()
-            }
-            Type::NegativeInteger(val) => {
-                0b0010_0000 | val.to_byte()
-            }
+            Type::UnsignedInteger(val) => 0u8 | val.to_byte(),
+            Type::NegativeInteger(val) => 0b0010_0000 | val.to_byte(),
             Type::Bytes(length) => 0b0100_0000 | length.to_byte(),
             Type::Text(length) => 0b0110_0000 | length.to_byte(),
             Type::Array(length) => 0b1000_0000 | length.to_byte(),
@@ -239,12 +260,12 @@ impl Type {
             let immediate_length = additional as usize;
             let length = Length::Sized(immediate_length);
             match byte & 0b1110_0000 {
-                0b0000_0000 => {
-                    Ok(Type::UnsignedInteger(Integer::Immediate(additional as u64)))
-                }
+                0b0000_0000 => Ok(Type::UnsignedInteger(Integer::Immediate(additional as u64))),
                 0b0010_0000 => {
                     let immediate_value = -1 - (additional as i64);
-                    Ok(Type::NegativeInteger(Integer::Immediate(immediate_value as i128)))
+                    Ok(Type::NegativeInteger(Integer::Immediate(
+                        immediate_value as i128,
+                    )))
                 }
                 0b0100_0000 => Ok(Type::Bytes(length)),
                 0b0110_0000 => Ok(Type::Text(length)),
@@ -262,8 +283,12 @@ impl Type {
                 Length::AdditionalBytes(byte_size)
             };
             match byte & 0b1110_0000 {
-                0b0000_0000 => Ok(Type::UnsignedInteger(Integer::Sized(ByteSize::from_byte(additional)?))),
-                0b0010_0000 => Ok(Type::NegativeInteger(Integer::Sized(ByteSize::from_byte(additional)?))),
+                0b0000_0000 => Ok(Type::UnsignedInteger(Integer::Sized(ByteSize::from_byte(
+                    additional,
+                )?))),
+                0b0010_0000 => Ok(Type::NegativeInteger(Integer::Sized(ByteSize::from_byte(
+                    additional,
+                )?))),
                 0b0100_0000 => Ok(Type::Bytes(length)),
                 0b0110_0000 => Ok(Type::Text(length)),
                 0b1000_0000 => Ok(Type::Array(length)),

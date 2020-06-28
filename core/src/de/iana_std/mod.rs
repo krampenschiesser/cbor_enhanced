@@ -1,2 +1,2 @@
-mod arrays;
 mod address;
+mod arrays;

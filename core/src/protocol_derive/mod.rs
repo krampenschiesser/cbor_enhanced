@@ -6,7 +6,7 @@ mod tests {
 
     use cbor_enhanced_derive_protocol::*;
 
-    use crate::{CborError, Deserialize, Deserializer, Serialize, to_vec};
+    use crate::{to_vec, CborError, Deserialize, Deserializer, Serialize};
 
     #[derive(cbor_protocol, Clone, Eq, PartialEq, Debug)]
     #[reserved(5, 6, 7)]
@@ -29,27 +29,47 @@ mod tests {
         #[id(1)]
         Empty,
         Val(#[id(2)] usize),
-        ValNamed { #[id(3)]name: usize },
-        ValStruct(#[id(4)]BlaStruct),
-        ValStructNamed { #[id(5)]my: BlaStruct },
-        ValMultipleTuple(#[id(6)]usize, #[id(7)]BlaStruct, #[id(8)]String),
-        ValMultipleName { #[id(9)]id: usize, #[id(10)]bla: BlaStruct, #[id(11)]name: String },
+        ValNamed {
+            #[id(3)]
+            name: usize,
+        },
+        ValStruct(#[id(4)] BlaStruct),
+        ValStructNamed {
+            #[id(5)]
+            my: BlaStruct,
+        },
+        ValMultipleTuple(#[id(6)] usize, #[id(7)] BlaStruct, #[id(8)] String),
+        ValMultipleName {
+            #[id(9)]
+            id: usize,
+            #[id(10)]
+            bla: BlaStruct,
+            #[id(11)]
+            name: String,
+        },
         ValOption(#[id(12)] Option<i32>),
-        ValDefault(#[id(13)]
-                   #[default] DefaultStruct),
+        ValDefault(
+            #[id(13)]
+            #[default]
+            DefaultStruct,
+        ),
     }
 
     #[derive(cbor_protocol, Eq, PartialEq, Debug)]
-    struct BlaTupleStruct(#[id(1)]BlaStruct, #[id(2)]usize);
+    struct BlaTupleStruct(#[id(1)] BlaStruct, #[id(2)] usize);
 
     #[derive(cbor_protocol, Eq, PartialEq, Debug)]
     struct StructWithVec {
         #[id(1)]
-        bytes: Vec<u8>
+        bytes: Vec<u8>,
     }
 
     #[derive(cbor_protocol, Eq, PartialEq, Debug)]
-    struct StructWithGenerics<'de, T: Serialize + Deserialize<'de> + Debug, E: Serialize + Deserialize<'de> + Debug> {
+    struct StructWithGenerics<
+        'de,
+        T: Serialize + Deserialize<'de> + Debug,
+        E: Serialize + Deserialize<'de> + Debug,
+    > {
         #[id(1)]
         data: Vec<T>,
         #[id(2)]
@@ -67,9 +87,8 @@ mod tests {
     #[derive(cbor_protocol, Eq, PartialEq, Debug)]
     struct StructWithBytes<'a> {
         #[id(1)]
-        bytes: &'a [u8]
+        bytes: &'a [u8],
     }
-
 
     #[test]
     fn it_works() {
@@ -77,28 +96,40 @@ mod tests {
             name: "hello world".into(),
             value: 42,
         };
-        test_serialize_and_back(&bla, b"\xA2\x01\x6B\x68\x65\x6C\x6C\x6F\x20\x77\x6F\x72\x6C\x64\x02\x18\x2A");
+        test_serialize_and_back(
+            &bla,
+            b"\xA2\x01\x6B\x68\x65\x6C\x6C\x6F\x20\x77\x6F\x72\x6C\x64\x02\x18\x2A",
+        );
         test_serialize_and_back(&BlaEnum::Empty, b"\xA1\x01\xF7");
         test_serialize_and_back(&BlaEnum::Val(42), b"\xA1\x02\x18\x2A");
         test_serialize_and_back(&BlaEnum::ValNamed { name: 42 }, b"\xA1\x03\x18\x2A");
-        test_serialize_and_back(&BlaEnum::ValStruct(bla.clone()), b"\xA1\x04\xA2\x01\x6B\x68\x65\x6C\x6C\x6F\x20\x77\x6F\x72\x6C\x64\x02\x18\x2A");
-        test_serialize_and_back(&BlaEnum::ValStructNamed { my: bla.clone() }, b"\xA1\x05\xA2\x01\x6B\x68\x65\x6C\x6C\x6F\x20\x77\x6F\x72\x6C\x64\x02\x18\x2A");
+        test_serialize_and_back(
+            &BlaEnum::ValStruct(bla.clone()),
+            b"\xA1\x04\xA2\x01\x6B\x68\x65\x6C\x6C\x6F\x20\x77\x6F\x72\x6C\x64\x02\x18\x2A",
+        );
+        test_serialize_and_back(
+            &BlaEnum::ValStructNamed { my: bla.clone() },
+            b"\xA1\x05\xA2\x01\x6B\x68\x65\x6C\x6C\x6F\x20\x77\x6F\x72\x6C\x64\x02\x18\x2A",
+        );
         test_serialize_and_back(&BlaEnum::ValMultipleTuple(8, bla.clone(), "sauerland!".into()), b"\xA3\x06\x08\x07\xA2\x01\x6B\x68\x65\x6C\x6C\x6F\x20\x77\x6F\x72\x6C\x64\x02\x18\x2A\x08\x6A\x73\x61\x75\x65\x72\x6C\x61\x6E\x64\x21");
         test_serialize_and_back(&BlaEnum::ValMultipleName { id: 8, bla: bla.clone(), name: "sauerland!".into() }, b"\xA3\x09\x08\x0A\xA2\x01\x6B\x68\x65\x6C\x6C\x6F\x20\x77\x6F\x72\x6C\x64\x02\x18\x2A\x0B\x6A\x73\x61\x75\x65\x72\x6C\x61\x6E\x64\x21");
         test_serialize_and_back(&BlaTupleStruct(bla.clone(), 42), b"\xA2\x01\xA2\x01\x6B\x68\x65\x6C\x6C\x6F\x20\x77\x6F\x72\x6C\x64\x02\x18\x2A\x02\x18\x2A");
 
         let data: Vec<u8> = b"\xCa\xFe\xBa\xbe".as_ref().into();
         let struct_with_bytes = StructWithBytes {
-            bytes: data.as_slice()
+            bytes: data.as_slice(),
         };
         let struct_with_vec = StructWithVec {
-            bytes: data.clone()
+            bytes: data.clone(),
         };
         test_serialize_and_back(&struct_with_bytes, b"\xA1\x01\x44\xCA\xFE\xBA\xBE");
         test_serialize_and_back(&struct_with_vec, b"\xA1\x01\x44\xCA\xFE\xBA\xBE");
     }
 
-    fn test_serialize_and_back<'de, T: Serialize + Deserialize<'de> + Eq + Debug>(t: &T, bytes: &'static [u8]) {
+    fn test_serialize_and_back<'de, T: Serialize + Deserialize<'de> + Eq + Debug>(
+        t: &T,
+        bytes: &'static [u8],
+    ) {
         let vec = to_vec(t);
         let hex: String = vec.iter().map(|b| format!("{:02X}", b)).collect();
         println!("{}", hex);

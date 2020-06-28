@@ -1,5 +1,5 @@
-use chrono::{Date, DateTime, FixedOffset, NaiveDate, NaiveDateTime, Offset, Timelike, Utc};
 use chrono::offset::TimeZone;
+use chrono::{Date, DateTime, FixedOffset, NaiveDate, NaiveDateTime, Offset, Timelike, Utc};
 
 use crate::ser::Serializer;
 use crate::types::IanaTag;
@@ -36,7 +36,11 @@ impl Serializer {
                 self.write_tag(IanaTag::EpochBasedTime);
                 let seconds_since_epoch = timestamp.timestamp();
                 let nanosecond = timestamp.nanosecond();
-                let nanosecond = if nanosecond > 1_000_000_000 { nanosecond - 1_000_000_000 } else { nanosecond };
+                let nanosecond = if nanosecond > 1_000_000_000 {
+                    nanosecond - 1_000_000_000
+                } else {
+                    nanosecond
+                };
                 let fraction = nanosecond as f64 * 0.000_000_001f64;
                 let time = seconds_since_epoch as f64 + fraction;
                 self.write_f64(time);
@@ -60,7 +64,7 @@ impl Serializer {
                     Precision::Millis => (-3, timestamp.nanosecond() / 1000 / 1000),
                     Precision::Micros => (-6, timestamp.nanosecond() / 1000),
                     Precision::Nanos => (-9, timestamp.nanosecond()),
-                    _ => unreachable!()
+                    _ => unreachable!(),
                 };
                 self.write_i64(key);
                 self.write_u64(value as u64);

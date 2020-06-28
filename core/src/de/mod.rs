@@ -1,31 +1,31 @@
 #[cfg(feature = "iana_numbers")]
 use half::f16;
 use nom::bytes::complete::take;
-use nom::number::complete::{be_f32, be_f64, be_u8};
 #[cfg(feature = "iana_numbers")]
 use nom::number::complete::be_u16;
+use nom::number::complete::{be_f32, be_f64, be_u8};
 
 use crate::error::CborError;
-use crate::ReducedSpecial;
 use crate::types::{IanaTag, Special, Type};
 use crate::value::Value;
+use crate::ReducedSpecial;
 
-#[cfg(feature = "iana_numbers")]
-mod iana_numbers;
-#[cfg(feature = "iana_std")]
-mod iana_std;
-#[cfg(feature = "iana_chrono")]
-mod iana_chrono;
 #[cfg(feature = "iana_bigint")]
 mod iana_bigint;
-#[cfg(feature = "iana_uuid")]
-mod iana_uuid;
-#[cfg(feature = "iana_regex")]
-mod iana_regex;
-#[cfg(feature = "iana_mime")]
-mod iana_mime;
+#[cfg(feature = "iana_chrono")]
+mod iana_chrono;
 #[cfg(feature = "iana_geo")]
 pub mod iana_geo;
+#[cfg(feature = "iana_mime")]
+mod iana_mime;
+#[cfg(feature = "iana_numbers")]
+mod iana_numbers;
+#[cfg(feature = "iana_regex")]
+mod iana_regex;
+#[cfg(feature = "iana_std")]
+mod iana_std;
+#[cfg(feature = "iana_uuid")]
+mod iana_uuid;
 
 #[allow(dead_code)]
 #[cfg(target_endian = "little")]
@@ -36,19 +36,31 @@ const IS_BIG_ENDIAN: bool = true;
 
 pub type Remaining<'de> = &'de [u8];
 
-pub trait Deserialize<'de> where Self: Sized {
-    fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError>;
+pub trait Deserialize<'de>
+where
+    Self: Sized,
+{
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError>;
 }
 
 pub struct Deserializer {
-//#[cfg(feature = "iana_string_ref")]
+    //#[cfg(feature = "iana_string_ref")]
 //string_references: Vec<Vec<&str>>
 }
 
 impl<'de> Deserializer {
-    pub fn new() -> Self { Self {} }
+    pub fn new() -> Self {
+        Self {}
+    }
 
-    fn take_type(&self, data: &'de [u8], skip_tags: bool) -> Result<(Type, Remaining<'de>), CborError> {
+    fn take_type(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(Type, Remaining<'de>), CborError> {
         let mut remaining = data;
         let tuple = loop {
             let (ret, value) = be_u8::<CborError>(remaining)?;
@@ -62,17 +74,23 @@ impl<'de> Deserializer {
         Ok(tuple)
     }
 
-    pub fn take_string(&self, data: &'de [u8], skip_tags: bool) -> Result<(&'de str, Remaining<'de>), CborError> {
+    pub fn take_string(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(&'de str, Remaining<'de>), CborError> {
         self.take_text(data, skip_tags)
     }
-    pub fn take_text(&self, data: &'de [u8], skip_tags: bool) -> Result<(&'de str, Remaining<'de>), CborError> {
+    pub fn take_text(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(&'de str, Remaining<'de>), CborError> {
         let (cbor_type, data) = self.take_type(data, skip_tags)?;
 
         let (data, o) = match cbor_type {
-            Type::Text(length) => {
-                length.take_length_to_read(data)
-            }
-            _ => Err(CborError::ExpectText(cbor_type))
+            Type::Text(length) => length.take_length_to_read(data),
+            _ => Err(CborError::ExpectText(cbor_type)),
         }?;
         if let Some(length) = o {
             let (remaining, slice) = take(length)(data)?;
@@ -80,141 +98,145 @@ impl<'de> Deserializer {
             Ok((text, remaining))
         } else {
             Err(CborError::InfiniteNotSupported)
-//            let byte = 0b1110_0000 | 31u8;
-//            let (remaining, slice) = take_till(|b| b == byte)(data)?;
-//            let text = std::str::from_utf8(slice)?;
-//            Ok((text, remaining))
         }
     }
 
-    pub fn take_bytes(&self, data: &'de [u8], skip_tags: bool) -> Result<(&'de [u8], Remaining<'de>), CborError> {
+    pub fn take_bytes(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(&'de [u8], Remaining<'de>), CborError> {
         let (cbor_type, data) = self.take_type(data, skip_tags)?;
         let (data, o) = match cbor_type {
-            Type::Bytes(length) => {
-                length.take_length_to_read(data)
-            }
-            _ => Err(CborError::ExpectBytes(cbor_type))
+            Type::Bytes(length) => length.take_length_to_read(data),
+            _ => Err(CborError::ExpectBytes(cbor_type)),
         }?;
         if let Some(length) = o {
             let (remaining, slice) = take(length)(data)?;
             Ok((slice, remaining))
         } else {
             Err(CborError::InfiniteNotSupported)
-//            let byte = 0b1110_0000 | 31u8;
-//            let (remaining, slice) = take_till(|b| b == byte)(data)?;
-//            Ok((slice, remaining))
         }
     }
 
-    pub fn take_unsigned(&self, data: &'de [u8], skip_tags: bool) -> Result<(u64, Remaining<'de>), CborError> {
+    pub fn take_unsigned(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(u64, Remaining<'de>), CborError> {
         let (cbor_type, remaining) = self.take_type(data, skip_tags)?;
         let (data, o) = match cbor_type {
-            Type::UnsignedInteger(int) => {
-                int.take_value(remaining)
-            }
-            _ => Err(CborError::ExpectUnsigned(cbor_type))
+            Type::UnsignedInteger(int) => int.take_value(remaining),
+            _ => Err(CborError::ExpectUnsigned(cbor_type)),
         }?;
         Ok((o, data))
     }
-    pub fn take_negative(&self, data: &'de [u8], skip_tags: bool) -> Result<(i128, Remaining<'de>), CborError> {
+    pub fn take_negative(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(i128, Remaining<'de>), CborError> {
         let (cbor_type, remaining) = self.take_type(data, skip_tags)?;
         let (data, o) = match cbor_type {
-            Type::NegativeInteger(int) => {
-                int.take_value(remaining)
-            }
-            Type::UnsignedInteger(int) => {
-                int.take_value(remaining).map(|v| (v.0, v.1 as i128))
-            }
-            _ => Err(CborError::ExpectNegative(cbor_type))
+            Type::NegativeInteger(int) => int.take_value(remaining),
+            Type::UnsignedInteger(int) => int.take_value(remaining).map(|v| (v.0, v.1 as i128)),
+            _ => Err(CborError::ExpectNegative(cbor_type)),
         }?;
         Ok((o, data))
     }
 
-    pub fn take_bool(&self, data: &'de [u8], skip_tags: bool) -> Result<(bool, Remaining<'de>), CborError> {
+    pub fn take_bool(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(bool, Remaining<'de>), CborError> {
         let (cbor_type, remaining) = self.take_type(data, skip_tags)?;
         match cbor_type {
-            Type::Special(special) => {
-                match special {
-                    Special::Bool(val) => Ok((val, remaining)),
-                    _ => Err(CborError::ExpectBool(special)),
-                }
-            }
-            _ => Err(CborError::ExpectSpecial(cbor_type))
+            Type::Special(special) => match special {
+                Special::Bool(val) => Ok((val, remaining)),
+                _ => Err(CborError::ExpectBool(special)),
+            },
+            _ => Err(CborError::ExpectSpecial(cbor_type)),
         }
     }
-    pub fn take_float(&self, data: &'de [u8], skip_tags: bool) -> Result<(f64, Remaining<'de>), CborError> {
+    pub fn take_float(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(f64, Remaining<'de>), CborError> {
         let (cbor_type, remaining) = self.take_type(data, skip_tags)?;
         let result = match cbor_type {
-            Type::Special(special) => {
-                match special {
-                    #[cfg(feature = "iana_numbers")]
-                    Special::F16 => {
-                        be_u16(remaining)
-                            .map(|v| {
-                                (f16::from_bits(v.1).to_f64(), v.0)
-                            })
-                            .map_err(|e| CborError::from(e))
-                    }
-                    Special::F32 => {
-                        be_f32(remaining).map(|v| (v.1 as f64, v.0)).map_err(|e| CborError::from(e))
-                    }
-                    Special::F64 => {
-                        be_f64(remaining).map(|v| (v.1 as f64, v.0)).map_err(|e| CborError::from(e))
-                    }
-                    _ => Err(CborError::ExpectBool(special)),
-                }
-            }
-            _ => Err(CborError::ExpectSpecial(cbor_type))
+            Type::Special(special) => match special {
+                #[cfg(feature = "iana_numbers")]
+                Special::F16 => be_u16(remaining)
+                    .map(|v| (f16::from_bits(v.1).to_f64(), v.0))
+                    .map_err(|e| CborError::from(e)),
+                Special::F32 => be_f32(remaining)
+                    .map(|v| (v.1 as f64, v.0))
+                    .map_err(|e| CborError::from(e)),
+                Special::F64 => be_f64(remaining)
+                    .map(|v| (v.1 as f64, v.0))
+                    .map_err(|e| CborError::from(e)),
+                _ => Err(CborError::ExpectBool(special)),
+            },
+            _ => Err(CborError::ExpectSpecial(cbor_type)),
         };
         result
     }
 
-    pub fn check_null_or_undefined(&self, data: &'de [u8], skip_tags: bool) -> Result<(bool, Remaining<'de>), CborError> {
+    pub fn check_null_or_undefined(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(bool, Remaining<'de>), CborError> {
         let (cbor_type, remaining) = self.take_type(data, skip_tags)?;
         match cbor_type {
-            Type::Special(special) => {
-                match special {
-                    Special::Undefined => Ok((true, remaining)),
-                    Special::Null => Ok((true, remaining)),
-                    _ => Ok((false, data))
-                }
-            }
-            _ => Ok((false, data))
+            Type::Special(special) => match special {
+                Special::Undefined => Ok((true, remaining)),
+                Special::Null => Ok((true, remaining)),
+                _ => Ok((false, data)),
+            },
+            _ => Ok((false, data)),
         }
     }
 
-    pub fn check_break(&self, data: &'de [u8], skip_tags: bool) -> Result<(bool, Remaining<'de>), CborError> {
+    pub fn check_break(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(bool, Remaining<'de>), CborError> {
         let (cbor_type, remaining) = self.take_type(data, skip_tags)?;
         match cbor_type {
-            Type::Special(special) => {
-                match special {
-                    Special::Break => Ok((true, remaining)),
-                    _ => Ok((false, data))
-                }
-            }
-            _ => Ok((false, data))
+            Type::Special(special) => match special {
+                Special::Break => Ok((true, remaining)),
+                _ => Ok((false, data)),
+            },
+            _ => Ok((false, data)),
         }
     }
 
-
-    pub fn take_array_def(&self, data: &'de [u8], skip_tags: bool) -> Result<(Option<usize>, Remaining<'de>), CborError> {
+    pub fn take_array_def(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(Option<usize>, Remaining<'de>), CborError> {
         let (cbor_type, data) = self.take_type(data, skip_tags)?;
         let (data, o) = match cbor_type {
-            Type::Array(length) => {
-                length.take_length_to_read(data)
-            }
-            _ => Err(CborError::ExpectArray(cbor_type))
+            Type::Array(length) => length.take_length_to_read(data),
+            _ => Err(CborError::ExpectArray(cbor_type)),
         }?;
         Ok((o, data))
     }
 
-    pub fn take_map_def(&self, data: &'de [u8], skip_tags: bool) -> Result<(Option<usize>, Remaining<'de>), CborError> {
+    pub fn take_map_def(
+        &self,
+        data: &'de [u8],
+        skip_tags: bool,
+    ) -> Result<(Option<usize>, Remaining<'de>), CborError> {
         let (cbor_type, data) = self.take_type(data, skip_tags)?;
         let (data, o) = match cbor_type {
-            Type::Map(length) => {
-                length.take_length_to_read(data)
-            }
-            _ => Err(CborError::ExpectMap(cbor_type))
+            Type::Map(length) => length.take_length_to_read(data),
+            _ => Err(CborError::ExpectMap(cbor_type)),
         }?;
         Ok((o, data))
     }
@@ -231,23 +253,32 @@ impl<'de> Deserializer {
     pub fn take_tag(&self, data: &'de [u8]) -> Result<(IanaTag, Remaining<'de>), CborError> {
         let (cbor_type, data) = self.take_type(data, false)?;
         let (data, o) = match cbor_type {
-            Type::Tag(int) => {
-                int.take_value(data)
-            }
-            _ => Err(CborError::ExpectMap(cbor_type))
+            Type::Tag(int) => int.take_value(data),
+            _ => Err(CborError::ExpectMap(cbor_type)),
         }?;
         Ok((IanaTag::from_tag(o), data))
     }
     #[allow(dead_code)]
-    fn take_n_array<T, F>(&self, data: &'de [u8], tag_values: &'static [IanaTag], multiple: usize, transfomer: F) -> Result<(Vec<T>, Remaining<'de>), CborError>
-        where F: Fn(IanaTag, &'de [u8]) -> Result<(T, &'de [u8]), CborError> {
+    fn take_n_array<T, F>(
+        &self,
+        data: &'de [u8],
+        tag_values: &'static [IanaTag],
+        multiple: usize,
+        transfomer: F,
+    ) -> Result<(Vec<T>, Remaining<'de>), CborError>
+    where
+        F: Fn(IanaTag, &'de [u8]) -> Result<(T, &'de [u8]), CborError>,
+    {
         let (tag, remaining) = self.take_tag(data)?;
         if !tag_values.contains(&tag) {
             return Err(CborError::InvalidTags(tag, tag_values));
         }
         let (bytes, remaining) = self.take_bytes(remaining, true)?;
         if bytes.len() % multiple != 0 {
-            return Err(CborError::InvalidArrayMultiple { needed_multiple_of: multiple, got: bytes.len() });
+            return Err(CborError::InvalidArrayMultiple {
+                needed_multiple_of: multiple,
+                got: bytes.len(),
+            });
         }
         let total = bytes.len() / multiple;
         let mut vec = Vec::with_capacity(total);
@@ -264,19 +295,36 @@ impl<'de> Deserializer {
     }
 
     #[cfg(feature = "iana_std")]
-    fn take_transmuted_array<T>(&self, data: &'de [u8], tag_be: IanaTag, tag_le: IanaTag, multiple: usize) -> Result<(&'de [T], Remaining<'de>), CborError>
-        where T: Clone + safe_transmute::TriviallyTransmutable {
+    fn take_transmuted_array<T>(
+        &self,
+        data: &'de [u8],
+        tag_be: IanaTag,
+        tag_le: IanaTag,
+        multiple: usize,
+    ) -> Result<(&'de [T], Remaining<'de>), CborError>
+    where
+        T: Clone + safe_transmute::TriviallyTransmutable,
+    {
         let (tag, remaining) = self.take_tag(data)?;
 
         if IS_BIG_ENDIAN && tag_be != tag {
-            return Err(CborError::WrongEndianness { expected: tag_be, got: tag });
+            return Err(CborError::WrongEndianness {
+                expected: tag_be,
+                got: tag,
+            });
         } else if !IS_BIG_ENDIAN && tag_le != tag {
-            return Err(CborError::WrongEndianness { expected: tag_le, got: tag });
+            return Err(CborError::WrongEndianness {
+                expected: tag_le,
+                got: tag,
+            });
         }
 
         let (bytes, remaining) = self.take_bytes(remaining, true)?;
         if bytes.len() % multiple != 0 {
-            return Err(CborError::InvalidArrayMultiple { needed_multiple_of: multiple, got: bytes.len() });
+            return Err(CborError::InvalidArrayMultiple {
+                needed_multiple_of: multiple,
+                got: bytes.len(),
+            });
         }
 
         let transmuted: &'de [T] = safe_transmute::transmute_many_pedantic::<T>(bytes)?;
@@ -286,23 +334,21 @@ impl<'de> Deserializer {
     pub fn take_value(&self, data: &'de [u8]) -> Result<(Value<'de>, Remaining<'de>), CborError> {
         let (cbor_type, remaining) = self.take_type(data, false)?;
         match cbor_type {
-            Type::Special(s) => {
-                match s {
-                    Special::F64 | Special::F32 => {
-                        let (number, remaining) = self.take_float(data, true)?;
-                        Ok((Value::F64(number), remaining))
-                    }
-                    #[cfg(feature = "iana_numbers")]
-                    Special::F16 => {
-                        let (number, remaining) = self.take_float(data, true)?;
-                        Ok((Value::F64(number), remaining))
-                    }
-                    Special::Bool(val) => Ok((Value::Bool(val), remaining)),
-                    Special::Break => Ok((Value::Special(ReducedSpecial::Break), remaining)),
-                    Special::Null => Ok((Value::Special(ReducedSpecial::Null), remaining)),
-                    Special::Undefined => Ok((Value::Special(ReducedSpecial::Undefined), remaining)),
+            Type::Special(s) => match s {
+                Special::F64 | Special::F32 => {
+                    let (number, remaining) = self.take_float(data, true)?;
+                    Ok((Value::F64(number), remaining))
                 }
-            }
+                #[cfg(feature = "iana_numbers")]
+                Special::F16 => {
+                    let (number, remaining) = self.take_float(data, true)?;
+                    Ok((Value::F64(number), remaining))
+                }
+                Special::Bool(val) => Ok((Value::Bool(val), remaining)),
+                Special::Break => Ok((Value::Special(ReducedSpecial::Break), remaining)),
+                Special::Null => Ok((Value::Special(ReducedSpecial::Null), remaining)),
+                Special::Undefined => Ok((Value::Special(ReducedSpecial::Undefined), remaining)),
+            },
             Type::NegativeInteger(_) => {
                 let (value, remaining) = self.take_negative(data, true)?;
                 Ok((Value::I128(value), remaining))
@@ -340,13 +386,11 @@ impl<'de> Deserializer {
                         to_read = ret;
 
                         let end = match value {
-                            Value::Special(s) => {
-                                match s {
-                                    ReducedSpecial::Break => true,
-                                    _ => false
-                                }
-                            }
-                            _ => false
+                            Value::Special(s) => match s {
+                                ReducedSpecial::Break => true,
+                                _ => false,
+                            },
+                            _ => false,
                         };
                         if end {
                             break;
@@ -375,13 +419,11 @@ impl<'de> Deserializer {
                         to_read = ret;
 
                         let end = match key {
-                            Value::Special(s) => {
-                                match s {
-                                    ReducedSpecial::Break => true,
-                                    _ => false
-                                }
-                            }
-                            _ => false
+                            Value::Special(s) => match s {
+                                ReducedSpecial::Break => true,
+                                _ => false,
+                            },
+                            _ => false,
                         };
                         if end {
                             break;
@@ -406,30 +448,44 @@ impl<'de> Deserializer {
         needle.iter().any(|v| haystack.contains(&v))
     }
 
-    pub fn check_is_some<T>(&self, option: &Option<T>, name: &'static str) -> Result<(),CborError> {
+    pub fn check_is_some<T>(
+        &self,
+        option: &Option<T>,
+        name: &'static str,
+    ) -> Result<(), CborError> {
         if option.is_none() {
             Err(CborError::NoValueFound(name))
-        }else {
+        } else {
             Ok(())
         }
     }
 }
 
-
 impl<'de> Deserialize<'de> for &'de str {
-    fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
         deserializer.take_text(data, true)
     }
 }
 
 impl<'de> Deserialize<'de> for String {
-    fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
-        deserializer.take_text(data, true).map(|t| (String::from(t.0), t.1))
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
+        deserializer
+            .take_text(data, true)
+            .map(|t| (String::from(t.0), t.1))
     }
 }
 
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for Vec<T> {
-    fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
         let (o, mut remaining) = deserializer.take_array_def(data, true)?;
         let mut vec = Vec::with_capacity(o.unwrap_or(100));
 
@@ -455,24 +511,33 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Vec<T> {
     }
 }
 
-
 macro_rules! impl_pos_number {
     ($number:ty) => {
         impl<'de> Deserialize<'de> for $number {
-            fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
-                deserializer.take_unsigned(data, true).map(|(v, remaining)| (v as $number, remaining))
+            fn deserialize(
+                deserializer: &mut Deserializer,
+                data: &'de [u8],
+            ) -> Result<(Self, &'de [u8]), CborError> {
+                deserializer
+                    .take_unsigned(data, true)
+                    .map(|(v, remaining)| (v as $number, remaining))
             }
         }
-    }
+    };
 }
 macro_rules! impl_neg_number {
     ($number:ty) => {
         impl<'de> Deserialize<'de> for $number {
-            fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
-                deserializer.take_negative(data, true).map(|(v, remaining)| (v as $number, remaining))
+            fn deserialize(
+                deserializer: &mut Deserializer,
+                data: &'de [u8],
+            ) -> Result<(Self, &'de [u8]), CborError> {
+                deserializer
+                    .take_negative(data, true)
+                    .map(|(v, remaining)| (v as $number, remaining))
             }
         }
-    }
+    };
 }
 
 impl_pos_number!(usize);
@@ -487,13 +552,27 @@ impl_neg_number!(i32);
 impl_neg_number!(i64);
 impl_neg_number!(i128);
 
-impl<'de, T: Deserialize<'de>>  Deserialize<'de> for Option<T> {
-    fn deserialize(deserializer: &mut Deserializer, data: &'de [u8]) -> Result<(Self, &'de [u8]), CborError> {
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for Option<T> {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
         let result = T::deserialize(deserializer, data);
-        if let Ok(res) =result{
-            Ok((Some(res.0),res.1))
-        }else {
-            Ok((None,data))
+        if let Ok(res) = result {
+            Ok((Some(res.0), res.1))
+        } else {
+            Ok((None, data))
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for bool {
+    fn deserialize(
+        deserializer: &mut Deserializer,
+        data: &'de [u8],
+    ) -> Result<(Self, &'de [u8]), CborError> {
+        deserializer
+            .take_bool(data, true)
+            .map(|(v, remaining)| (v, remaining))
     }
 }

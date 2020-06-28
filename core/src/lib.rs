@@ -6,13 +6,12 @@ pub use ser::{Serialize, Serializer};
 pub use types::*;
 pub use value::Value;
 
-mod ser;
 mod de;
+mod ser;
 
+mod error;
 mod types;
 mod value;
-mod error;
-
 
 #[cfg(feature = "protocol_derive")]
 mod protocol_derive;

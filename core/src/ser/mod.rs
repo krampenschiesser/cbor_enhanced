@@ -1,30 +1,33 @@
 use std::collections::{BTreeMap, HashMap};
 
-use bytes::{BufMut, BytesMut, Bytes};
+use bytes::{BufMut, Bytes, BytesMut};
 #[cfg(feature = "iana_numbers")]
 use half::f16;
 
-use crate::{ReducedSpecial, Value};
 use crate::types::{IanaTag, MAX_INLINE_ENCODING};
+use crate::{ReducedSpecial, Value};
 
-#[cfg(feature = "iana_numbers")]
-mod iana_numbers;
-#[cfg(feature = "iana_std")]
-mod iana_std;
-#[cfg(feature = "iana_chrono")]
-mod iana_chrono;
 #[cfg(feature = "iana_bigint")]
 mod iana_bigint;
-#[cfg(feature = "iana_uuid")]
-mod iana_uuid;
-#[cfg(feature = "iana_regex")]
-mod iana_regex;
-#[cfg(feature = "iana_mime")]
-mod iana_mime;
+#[cfg(feature = "iana_chrono")]
+mod iana_chrono;
 #[cfg(feature = "iana_geo")]
 mod iana_geo;
+#[cfg(feature = "iana_mime")]
+mod iana_mime;
+#[cfg(feature = "iana_numbers")]
+mod iana_numbers;
+#[cfg(feature = "iana_regex")]
+mod iana_regex;
+#[cfg(feature = "iana_std")]
+mod iana_std;
+#[cfg(feature = "iana_uuid")]
+mod iana_uuid;
 
-pub trait Serialize where Self: Sized {
+pub trait Serialize
+where
+    Self: Sized,
+{
     fn serialize(&self, serializer: &mut Serializer);
 }
 
@@ -41,7 +44,7 @@ impl AsRef<[u8]> for Serializer {
 impl Serializer {
     pub fn new() -> Self {
         Serializer {
-            bytes: BytesMut::new()
+            bytes: BytesMut::new(),
         }
     }
     pub fn write_array_def(&mut self, length: usize) {
@@ -69,7 +72,11 @@ impl Serializer {
 
     fn write_u64_internal(&mut self, value: u64, mask: u8) -> () {
         let slice: [u8; 8] = value.to_be_bytes();
-        let option = slice.iter().enumerate().find(|(_, b)| **b > 0u8).map(|(pos, _)| pos);
+        let option = slice
+            .iter()
+            .enumerate()
+            .find(|(_, b)| **b > 0u8)
+            .map(|(pos, _)| pos);
         if value <= (MAX_INLINE_ENCODING as u64) {
             self.bytes.reserve(1);
             self.bytes.put_u8(mask | value as u8)
@@ -164,13 +171,11 @@ impl Serializer {
                     self.write_value(value);
                 });
             }
-            Value::Special(special) => {
-                match special {
-                    ReducedSpecial::Undefined => self.write_undefined(),
-                    ReducedSpecial::Null => self.write_null(),
-                    ReducedSpecial::Break => self.write_break(),
-                }
-            }
+            Value::Special(special) => match special {
+                ReducedSpecial::Undefined => self.write_undefined(),
+                ReducedSpecial::Null => self.write_null(),
+                ReducedSpecial::Break => self.write_break(),
+            },
             Value::Bool(val) => self.write_bool(*val),
         }
     }
@@ -204,7 +209,7 @@ macro_rules! impl_pos_number {
                 serializer.write_u64(*self as u64);
             }
         }
-    }
+    };
 }
 macro_rules! impl_neg_number {
     ($number:ty) => {
@@ -213,7 +218,7 @@ macro_rules! impl_neg_number {
                 serializer.write_i64(*self as i128);
             }
         }
-    }
+    };
 }
 
 impl_pos_number!(usize);
@@ -258,7 +263,6 @@ impl<T: Serialize> Serialize for &[T] {
         self.iter().for_each(|e| e.serialize(serializer));
     }
 }
-
 
 impl<K: Serialize, V: Serialize> Serialize for HashMap<K, V> {
     fn serialize(&self, serializer: &mut Serializer) {
@@ -307,9 +311,7 @@ impl Serialize for &str {
 impl<T: Serialize> Serialize for Option<T> {
     fn serialize(&self, serializer: &mut Serializer) {
         match self {
-            Some(val) => {
-                val.serialize(serializer)
-            }
+            Some(val) => val.serialize(serializer),
             None => (),
         }
     }
