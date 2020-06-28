@@ -1,6 +1,7 @@
 # Cbor enhanced library
 [![Actions Status](https://github.com/krampenschiesser/cbor_enhanced/workflows/Rust/badge.svg)](https://github.com/krampenschiesser/cbor_enhanced/actions)
-
+[![Crate](https://img.shields.io/crates/v/cbor_enhanced.svg)](https://crates.io/crates/cbor_enhanced)
+[![API](https://docs.rs/cbor_enhanced/badge.svg)](https://docs.rs/cbor_enhanced)
 
 Inspired by [cbor_event](https://github.com/primetype/cbor_event) but making use of lifetimes to support zero copy deserialization.
 In addition several iana tags are supported but need to be activated via feature flags.
@@ -28,7 +29,6 @@ In addition several iana tags are supported but need to be activated via feature
 
 * Zero-Copy deserialization
 * Support for various iana tags
-
 
 ## License
 
