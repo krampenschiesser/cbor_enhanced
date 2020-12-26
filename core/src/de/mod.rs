@@ -71,7 +71,7 @@ impl<'de> Deserializer {
     ) -> Result<(Type, Remaining<'de>), CborError> {
         let mut remaining = data;
         let tuple = loop {
-            let (ret, value) = be_u8::<CborError>(remaining)?;
+            let (ret, value) = be_u8(remaining)?;
             remaining = ret;
             let cur_type = Type::from_byte(value)?;
             if cur_type.is_tag() && skip_tags {

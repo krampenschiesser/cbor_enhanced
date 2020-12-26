@@ -22,16 +22,16 @@ pub enum ByteSize {
 impl ByteSize {
     pub fn read<'de>(&self, data: &'de [u8]) -> Result<(&'de [u8], usize), CborError> {
         match self {
-            ByteSize::Size1Byte => be_u8::<CborError>(data)
+            ByteSize::Size1Byte => be_u8(data)
                 .map(|v| (v.0, v.1 as usize))
                 .map_err(CborError::from),
-            ByteSize::Size2Bytes => be_u16::<CborError>(data)
+            ByteSize::Size2Bytes => be_u16(data)
                 .map(|v| (v.0, v.1 as usize))
                 .map_err(CborError::from),
-            ByteSize::Size4Bytes => be_u32::<CborError>(data)
+            ByteSize::Size4Bytes => be_u32(data)
                 .map(|v| (v.0, v.1 as usize))
                 .map_err(CborError::from),
-            ByteSize::Size8Bytes => be_u64::<CborError>(data)
+            ByteSize::Size8Bytes => be_u64(data)
                 .map(|v| (v.0, v.1 as usize))
                 .map_err(CborError::from),
         }
@@ -87,16 +87,16 @@ impl Integer<u64> {
         match self {
             Integer::Immediate(val) => Ok((data, (*val) as u64)),
             Integer::Sized(size) => match size {
-                ByteSize::Size1Byte => be_u8::<CborError>(data)
+                ByteSize::Size1Byte => be_u8(data)
                     .map(|v| (v.0, v.1 as u64))
                     .map_err(CborError::from),
-                ByteSize::Size2Bytes => be_u16::<CborError>(data)
+                ByteSize::Size2Bytes => be_u16(data)
                     .map(|v| (v.0, v.1 as u64))
                     .map_err(CborError::from),
-                ByteSize::Size4Bytes => be_u32::<CborError>(data)
+                ByteSize::Size4Bytes => be_u32(data)
                     .map(|v| (v.0, v.1 as u64))
                     .map_err(CborError::from),
-                ByteSize::Size8Bytes => be_u64::<CborError>(data).map_err(CborError::from),
+                ByteSize::Size8Bytes => be_u64(data).map_err(CborError::from),
             },
         }
     }
@@ -114,16 +114,16 @@ impl Integer<i128> {
         match self {
             Integer::Immediate(val) => Ok((data, (*val) as i128)),
             Integer::Sized(size) => match size {
-                ByteSize::Size1Byte => be_u8::<CborError>(data)
+                ByteSize::Size1Byte => be_u8(data)
                     .map(|v| (v.0, -1i128 - v.1 as i128))
                     .map_err(CborError::from),
-                ByteSize::Size2Bytes => be_u16::<CborError>(data)
+                ByteSize::Size2Bytes => be_u16(data)
                     .map(|v| (v.0, -1i128 - v.1 as i128))
                     .map_err(CborError::from),
-                ByteSize::Size4Bytes => be_u32::<CborError>(data)
+                ByteSize::Size4Bytes => be_u32(data)
                     .map(|v| (v.0, -1i128 - v.1 as i128))
                     .map_err(CborError::from),
-                ByteSize::Size8Bytes => be_u64::<CborError>(data)
+                ByteSize::Size8Bytes => be_u64(data)
                     .map(|v| (v.0, -1i128 - v.1 as i128))
                     .map_err(CborError::from),
             },
