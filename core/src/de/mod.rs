@@ -5,11 +5,14 @@ use nom::bytes::complete::take;
 use nom::number::complete::be_u16;
 use nom::number::complete::{be_f32, be_f64, be_u8};
 
+use crate::convert_slice::from_bytes;
 use crate::error::CborError;
 use crate::types::{IanaTag, Special, Type};
 use crate::value::Value;
 use crate::ReducedSpecial;
 use nom::lib::std::collections::HashMap;
+use num_traits::Num;
+use std::borrow::Cow;
 use std::hash::Hash;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -266,16 +269,18 @@ impl<'de> Deserializer {
         }?;
         Ok((IanaTag::from_tag(o), data))
     }
-    #[allow(dead_code)]
-    fn take_n_array<T, F>(
+
+    fn take_n_array<V, F>(
         &self,
         data: &'de [u8],
         tag_values: &'static [IanaTag],
         multiple: usize,
         transfomer: F,
-    ) -> Result<(Vec<T>, Remaining<'de>), CborError>
+    ) -> Result<(Cow<'de, [V]>, Remaining<'de>), CborError>
     where
-        F: Fn(IanaTag, &'de [u8]) -> Result<(T, &'de [u8]), CborError>,
+        V: Num,
+        [V]: ToOwned<Owned = Vec<V>>,
+        F: Fn(IanaTag, &'de [u8]) -> Result<(V, &'de [u8]), CborError>,
     {
         let (tag, remaining) = self.take_tag(data)?;
         if !tag_values.contains(&tag) {
@@ -288,58 +293,25 @@ impl<'de> Deserializer {
                 got: bytes.len(),
             });
         }
-        let total = bytes.len() / multiple;
-        let mut vec = Vec::with_capacity(total);
-        let mut to_read = bytes;
-        loop {
-            if vec.len() == total {
-                break;
+        let le_array_and_aligned = tag.is_le_array() && cfg![target_endian = "little"];
+        let be_array_and_aligned = tag.is_be_array() && cfg![target_endian = "big"];
+        if le_array_and_aligned || be_array_and_aligned {
+            let slice = from_bytes::<V>(bytes);
+            Ok((Cow::Borrowed(slice), remaining))
+        } else {
+            let total = bytes.len() / multiple;
+            let mut vec = Vec::with_capacity(total);
+            let mut to_read = bytes;
+            loop {
+                if vec.len() == total {
+                    break;
+                }
+                let (val, ret) = transfomer(tag, to_read)?;
+                to_read = ret;
+                vec.push(val);
             }
-            let (val, ret) = transfomer(tag, to_read)?;
-            to_read = ret;
-            vec.push(val);
+            Ok((Cow::Owned(vec), remaining))
         }
-        Ok((vec, remaining))
-    }
-
-    #[cfg(feature = "iana_std")]
-    fn take_transmuted_array<T>(
-        &self,
-        data: &'de [u8],
-        tag_be: IanaTag,
-        tag_le: IanaTag,
-        multiple: usize,
-    ) -> Result<(&'de [T], Remaining<'de>), CborError>
-    where
-        T: Clone + safe_transmute::TriviallyTransmutable,
-    {
-        let (tag, remaining) = self.take_tag(data)?;
-
-        if IS_BIG_ENDIAN && tag_be != tag {
-            return Err(CborError::WrongEndianness {
-                expected: tag_be,
-                got: tag,
-            });
-        } else if !IS_BIG_ENDIAN && tag_le != tag {
-            return Err(CborError::WrongEndianness {
-                expected: tag_le,
-                got: tag,
-            });
-        }
-
-        let (bytes, remaining) = self.take_bytes(remaining, true)?;
-        if bytes.len() % multiple != 0 {
-            return Err(CborError::InvalidArrayMultiple {
-                needed_multiple_of: multiple,
-                got: bytes.len(),
-            });
-        }
-        let transmuted = unsafe {
-            safe_transmute::trivial::transmute_trivial_many::<T, safe_transmute::PedanticGuard>(
-                bytes,
-            )
-        }?;
-        Ok((transmuted, remaining))
     }
 
     pub fn take_reduced_special(

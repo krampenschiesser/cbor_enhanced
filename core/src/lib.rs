@@ -6,10 +6,10 @@ pub use ser::{Serialize, Serializer};
 pub use types::*;
 pub use value::Value;
 
+mod convert_slice;
 mod de;
-mod ser;
-
 mod error;
+mod ser;
 mod types;
 mod value;
 

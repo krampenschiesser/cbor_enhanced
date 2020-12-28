@@ -1,4 +1,5 @@
 use cbor_enhanced::*;
+use std::borrow::Cow;
 
 fn main() {
     let data = [42u16; 200];
@@ -22,8 +23,8 @@ fn main() {
         let serialized = serializer.get_bytes();
 
         //have a look at zerocopy example if you don't want to allocate the vec
-        let output: Vec<u16> = deserializer.take_u16_array(serialized.as_ref()).unwrap().0;
-        assert_eq!(data_ref, output.as_slice());
+        let output: Cow<[u16]> = deserializer.take_u16_array(serialized.as_ref()).unwrap().0;
+        assert_eq!(data_ref, output.as_ref());
 
         serializer.reset();
         let data = [42f32; 200];
@@ -33,7 +34,11 @@ fn main() {
         let serialized = serializer.get_bytes();
 
         //have a look at zerocopy example if you don't want to allocate the vec
-        let output: Vec<f32> = deserializer.take_f32_array(serialized.as_ref()).unwrap().0;
+        let output: Vec<f32> = deserializer
+            .take_f32_array(serialized.as_ref())
+            .unwrap()
+            .0
+            .to_vec();
         assert_eq!(data_ref, output.as_slice());
     }
 }

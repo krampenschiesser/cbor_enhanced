@@ -199,7 +199,110 @@ pub enum IanaTag {
     RainsMessage,
 }
 
+pub const BE_ARRAY_TAGS: &'static [IanaTag] = &[
+    IanaTag::F16BeArray,
+    IanaTag::F32BeArray,
+    IanaTag::F64BeArray,
+    IanaTag::F128BeArray,
+    IanaTag::Uint8Array,
+    IanaTag::Uint16BeArray,
+    IanaTag::Uint32BeArray,
+    IanaTag::Uint64BeArray,
+    IanaTag::Sint16BeArray,
+    IanaTag::Sint32BeArray,
+    IanaTag::Sint64BeArray,
+    IanaTag::Sint64BeArray,
+];
+pub const LE_ARRAY_TAGS: &'static [IanaTag] = &[
+    IanaTag::F16LeArray,
+    IanaTag::F32LeArray,
+    IanaTag::F64LeArray,
+    IanaTag::F128LeArray,
+    IanaTag::Uint8Array,
+    IanaTag::Uint16LeArray,
+    IanaTag::Uint32LeArray,
+    IanaTag::Uint64LeArray,
+    IanaTag::Sint16LeArray,
+    IanaTag::Sint32LeArray,
+    IanaTag::Sint64LeArray,
+    IanaTag::Sint64LeArray,
+];
+
+pub const ALL_ARRAY_TAGS: &'static [IanaTag] = &[
+    IanaTag::F16BeArray,
+    IanaTag::F32BeArray,
+    IanaTag::F64BeArray,
+    IanaTag::F128BeArray,
+    IanaTag::Uint8Array,
+    IanaTag::Uint16BeArray,
+    IanaTag::Uint32BeArray,
+    IanaTag::Uint64BeArray,
+    IanaTag::Sint16BeArray,
+    IanaTag::Sint32BeArray,
+    IanaTag::Sint64BeArray,
+    IanaTag::Sint64BeArray,
+    IanaTag::F16LeArray,
+    IanaTag::F32LeArray,
+    IanaTag::F64LeArray,
+    IanaTag::F128LeArray,
+    IanaTag::Uint8Array,
+    IanaTag::Uint16LeArray,
+    IanaTag::Uint32LeArray,
+    IanaTag::Uint64LeArray,
+    IanaTag::Sint16LeArray,
+    IanaTag::Sint32LeArray,
+    IanaTag::Sint64LeArray,
+    IanaTag::Sint64LeArray,
+];
+
+const BYTE2_ARRAYS: &'static [IanaTag] = &[
+    IanaTag::F16LeArray,
+    IanaTag::F16BeArray,
+    IanaTag::F128BeArray,
+    IanaTag::Uint16LeArray,
+    IanaTag::Uint16BeArray,
+    IanaTag::Sint16LeArray,
+    IanaTag::Sint16BeArray,
+];
+
+const BYTE4_ARRAYS: &'static [IanaTag] = &[
+    IanaTag::F32LeArray,
+    IanaTag::F32BeArray,
+    IanaTag::Uint32LeArray,
+    IanaTag::Uint32BeArray,
+    IanaTag::Sint32LeArray,
+    IanaTag::Sint32BeArray,
+];
+const BYTE8_ARRAYS: &'static [IanaTag] = &[
+    IanaTag::F64LeArray,
+    IanaTag::F64BeArray,
+    IanaTag::Uint64LeArray,
+    IanaTag::Uint64BeArray,
+    IanaTag::Sint64LeArray,
+    IanaTag::Sint64BeArray,
+];
+const BYTE16_ARRAYS: &'static [IanaTag] = &[IanaTag::F128LeArray, IanaTag::F128BeArray];
+
 impl IanaTag {
+    pub fn get_array_multiple(&self) -> usize {
+        if BYTE2_ARRAYS.contains(self) {
+            2
+        } else if BYTE4_ARRAYS.contains(self) {
+            4
+        } else if BYTE8_ARRAYS.contains(self) {
+            8
+        } else if BYTE16_ARRAYS.contains(self) {
+            16
+        } else {
+            0
+        }
+    }
+    pub fn is_le_array(&self) -> bool {
+        LE_ARRAY_TAGS.contains(self)
+    }
+    pub fn is_be_array(&self) -> bool {
+        BE_ARRAY_TAGS.contains(self)
+    }
     pub fn to_tag(&self) -> u64 {
         use IanaTag::*;
         match self {

@@ -33,11 +33,11 @@ fn main() {
         // and
         // https://doc.rust-lang.org/nomicon/transmutes.html
         let output = deserializer
-            .take_u64_array_transmuted(serializer.get_bytes())
+            .take_u64_array(serializer.get_bytes())
             .unwrap()
             .0;
         assert_eq!(input.len(), output.len());
-        assert_eq!(input, output);
+        assert_eq!(input, output.as_ref());
     }
 }
 

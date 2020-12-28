@@ -4,6 +4,8 @@ use crate::types::{IanaTag, Special, Type};
 
 #[derive(Debug, failure::Fail, Clone)]
 pub enum CborError {
+    #[fail(display = "could not take array: {}", _0)]
+    ArrayTakeError(String),
     #[fail(display = "unknown error occurred: {}", _0)]
     Unknown(&'static str),
     #[fail(display = "expected bool but got: {:?}", _0)]
