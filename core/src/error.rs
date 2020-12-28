@@ -7,7 +7,7 @@ pub enum CborError {
     #[fail(display = "could not take array: {}", _0)]
     ArrayTakeError(String),
     #[fail(display = "unknown error occurred: {}", _0)]
-    Unknown(&'static str),
+    Unknown(String),
     #[fail(display = "expected bool but got: {:?}", _0)]
     ExpectBool(Special),
     #[fail(display = "expected null but got: {:?}", _0)]

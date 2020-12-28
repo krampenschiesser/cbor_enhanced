@@ -119,11 +119,15 @@ impl<'de> Deserializer {
             if precision_level > 0 {
                 time = time
                     .with_nanosecond(precision_ns as u32)
-                    .ok_or(CborError::Unknown("Could not convert time for tag 1001"))?;
+                    .ok_or(CborError::Unknown(
+                        "Could not convert time for tag 1001".to_string(),
+                    ))?;
             }
             Ok((time, remaining))
         } else {
-            Err(CborError::Unknown("Could not parse date time for Tag 1001"))
+            Err(CborError::Unknown(
+                "Could not parse date time for Tag 1001".to_string(),
+            ))
         }
     }
 }
