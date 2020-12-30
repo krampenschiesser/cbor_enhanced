@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::{BufMut, BytesMut};
 #[cfg(feature = "iana_numbers")]
 use half::f16;
 
@@ -214,8 +214,8 @@ impl Serializer {
     pub fn get_bytes(&self) -> &[u8] {
         self.bytes.as_bytes()
     }
-    pub fn into_bytes(self) -> Bytes {
-        self.bytes.freeze()
+    pub fn into_bytes(self) -> BytesMut {
+        self.bytes
     }
 }
 

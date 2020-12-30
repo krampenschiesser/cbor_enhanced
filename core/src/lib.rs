@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use bytes::BytesMut;
 
 pub use de::{Deserialize, Deserializer};
 pub use error::CborError;
@@ -16,7 +16,7 @@ mod value;
 #[cfg(feature = "protocol_derive")]
 pub use cbor_enhanced_derive_protocol::cbor_protocol;
 
-pub fn to_bytes<T: Serialize>(t: &T) -> Bytes {
+pub fn to_bytes<T: Serialize>(t: &T) -> BytesMut {
     let mut serializer = Serializer::new();
     t.serialize(&mut serializer);
     serializer.into_bytes()
