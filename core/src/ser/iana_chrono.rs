@@ -1,6 +1,7 @@
 use chrono::offset::TimeZone;
 use chrono::{Date, DateTime, FixedOffset, NaiveDate, NaiveDateTime, Offset, Timelike, Utc};
 
+use crate::context::Context;
 use crate::ser::Serializer;
 use crate::types::IanaTag;
 use crate::Serialize;
@@ -84,7 +85,7 @@ impl Serializer {
 }
 
 impl Serialize for DateTime<FixedOffset> {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_datetime(self, Precision::Nanos);
     }
 }

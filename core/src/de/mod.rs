@@ -5,6 +5,7 @@ use nom::bytes::complete::take;
 use nom::number::complete::be_u16;
 use nom::number::complete::{be_f32, be_f64, be_u8};
 
+use crate::context::Context;
 use crate::convert_slice::from_bytes;
 use crate::error::CborError;
 use crate::types::{IanaTag, Special, Type};
@@ -50,6 +51,7 @@ where
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError>;
 }
 
@@ -464,6 +466,7 @@ impl<'de> Deserialize<'de> for &'de str {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        _context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
         deserializer.take_text(data, true)
     }
@@ -473,6 +476,7 @@ impl<'de> Deserialize<'de> for String {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        _context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
         deserializer
             .take_text(data, true)
@@ -484,6 +488,7 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Vec<T> {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
         let (o, mut remaining) = deserializer.take_array_def(data, true)?;
         let mut vec = Vec::with_capacity(o.unwrap_or(100));
@@ -501,7 +506,7 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Vec<T> {
                     break;
                 }
             }
-            let (value, ret) = T::deserialize(deserializer, remaining)?;
+            let (value, ret) = T::deserialize(deserializer, remaining, context)?;
             remaining = ret;
             vec.push(value);
             visited_elemnents += 1;
@@ -516,6 +521,7 @@ macro_rules! impl_pos_number {
             fn deserialize(
                 deserializer: &mut Deserializer,
                 data: &'de [u8],
+                _context: &Context,
             ) -> Result<(Self, &'de [u8]), CborError> {
                 deserializer
                     .take_unsigned(data, true)
@@ -530,6 +536,7 @@ macro_rules! impl_neg_number {
             fn deserialize(
                 deserializer: &mut Deserializer,
                 data: &'de [u8],
+                _context: &Context,
             ) -> Result<(Self, &'de [u8]), CborError> {
                 deserializer
                     .take_negative(data, true)
@@ -556,8 +563,9 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Option<T> {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
-        let result = T::deserialize(deserializer, data);
+        let result = T::deserialize(deserializer, data, context);
         if let Ok(res) = result {
             Ok((Some(res.0), res.1))
         } else {
@@ -569,6 +577,7 @@ impl<'de, K: Deserialize<'de> + Eq + Hash, V: Deserialize<'de>> Deserialize<'de>
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
         let (length, remaining) = deserializer.take_map_def(data, true)?;
         let mut to_read = remaining;
@@ -580,10 +589,10 @@ impl<'de, K: Deserialize<'de> + Eq + Hash, V: Deserialize<'de>> Deserialize<'de>
 
         if let Some(length) = length {
             for _ in 0..length {
-                let (key, ret) = K::deserialize(deserializer, to_read)?;
+                let (key, ret) = K::deserialize(deserializer, to_read, context)?;
                 to_read = ret;
 
-                let (value, ret) = V::deserialize(deserializer, to_read)?;
+                let (value, ret) = V::deserialize(deserializer, to_read, context)?;
                 to_read = ret;
                 map.insert(key, value);
             }
@@ -601,10 +610,10 @@ impl<'de, K: Deserialize<'de> + Eq + Hash, V: Deserialize<'de>> Deserialize<'de>
                     break;
                 }
 
-                let (key, ret) = K::deserialize(deserializer, to_read)?;
+                let (key, ret) = K::deserialize(deserializer, to_read, context)?;
                 to_read = ret;
 
-                let (value, ret) = V::deserialize(deserializer, to_read)?;
+                let (value, ret) = V::deserialize(deserializer, to_read, context)?;
                 to_read = ret;
                 map.insert(key, value);
             }
@@ -617,6 +626,7 @@ impl<'de> Deserialize<'de> for bool {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        _context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
         deserializer
             .take_bool(data, true)
@@ -628,6 +638,7 @@ impl<'de> Deserialize<'de> for f32 {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        _context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
         deserializer
             .take_float(data, true)
@@ -639,6 +650,7 @@ impl<'de> Deserialize<'de> for f64 {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        _context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
         deserializer
             .take_float(data, true)
@@ -650,15 +662,17 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Arc<T> {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
-        T::deserialize(deserializer, data).map(|t| (Arc::new(t.0), t.1))
+        T::deserialize(deserializer, data, context).map(|t| (Arc::new(t.0), t.1))
     }
 }
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for Rc<T> {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
-        T::deserialize(deserializer, data).map(|t| (Rc::new(t.0), t.1))
+        T::deserialize(deserializer, data, context).map(|t| (Rc::new(t.0), t.1))
     }
 }

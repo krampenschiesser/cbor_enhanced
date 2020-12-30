@@ -1,5 +1,6 @@
 use std::net::IpAddr;
 
+use crate::context::Context;
 use crate::ser::Serializer;
 use crate::types::IanaTag;
 use crate::Serialize;
@@ -24,7 +25,7 @@ impl Serializer {
 }
 
 impl Serialize for IpAddr {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_ip_address(self);
     }
 }

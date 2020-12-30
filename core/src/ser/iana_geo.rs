@@ -1,3 +1,4 @@
+use crate::context::Context;
 use crate::de::iana_geo::GeoCoordinate;
 use crate::ser::Serializer;
 use crate::types::IanaTag;
@@ -24,7 +25,7 @@ impl Serializer {
 }
 
 impl Serialize for GeoCoordinate {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_geo(self);
     }
 }

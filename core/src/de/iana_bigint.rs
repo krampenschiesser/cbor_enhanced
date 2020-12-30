@@ -1,5 +1,6 @@
 use num_bigint::{BigInt, BigUint};
 
+use crate::context::Context;
 use crate::de::{Deserializer, Remaining};
 use crate::error::CborError;
 use crate::types::IanaTag;
@@ -26,6 +27,7 @@ impl<'de> Deserialize<'de> for BigUint {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        _context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
         deserializer
             .take_biguint(data)
@@ -37,6 +39,7 @@ impl<'de> Deserialize<'de> for BigInt {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        _context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
         deserializer
             .take_bigint(data)

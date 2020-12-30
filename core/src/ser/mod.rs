@@ -4,6 +4,7 @@ use bytes::{BufMut, BytesMut};
 #[cfg(feature = "iana_numbers")]
 use half::f16;
 
+use crate::context::Context;
 use crate::types::{IanaTag, MAX_INLINE_ENCODING};
 use crate::{ReducedSpecial, Value};
 use nom::AsBytes;
@@ -31,7 +32,7 @@ pub trait Serialize
 where
     Self: Sized,
 {
-    fn serialize(&self, serializer: &mut Serializer);
+    fn serialize(&self, serializer: &mut Serializer, context: &Context);
 }
 
 pub struct Serializer {
@@ -222,7 +223,7 @@ impl Serializer {
 macro_rules! impl_pos_number {
     ($number:ty) => {
         impl Serialize for $number {
-            fn serialize(&self, serializer: &mut Serializer) {
+            fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
                 serializer.write_u64(*self as u64);
             }
         }
@@ -231,7 +232,7 @@ macro_rules! impl_pos_number {
 macro_rules! impl_neg_number {
     ($number:ty) => {
         impl Serialize for $number {
-            fn serialize(&self, serializer: &mut Serializer) {
+            fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
                 serializer.write_i64(*self as i128);
             }
         }
@@ -249,99 +250,99 @@ impl_neg_number!(i32);
 impl_neg_number!(i64);
 
 impl Serialize for f32 {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_f32(*self);
     }
 }
 
 impl Serialize for f64 {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_f64(*self);
     }
 }
 
 #[cfg(feature = "iana_numbers")]
 impl Serialize for f16 {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_f16(*self);
     }
 }
 
 impl<T: Serialize> Serialize for Vec<T> {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, context: &Context) {
         serializer.write_array_def(self.len());
-        self.iter().for_each(|e| e.serialize(serializer));
+        self.iter().for_each(|e| e.serialize(serializer, context));
     }
 }
 
 impl<T: Serialize> Serialize for &[T] {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, context: &Context) {
         serializer.write_array_def(self.len());
-        self.iter().for_each(|e| e.serialize(serializer));
+        self.iter().for_each(|e| e.serialize(serializer, context));
     }
 }
 
 impl<K: Serialize, V: Serialize> Serialize for HashMap<K, V> {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, context: &Context) {
         serializer.write_map_def(self.len());
         self.iter().for_each(|(k, v)| {
-            k.serialize(serializer);
-            v.serialize(serializer);
+            k.serialize(serializer, context);
+            v.serialize(serializer, context);
         });
     }
 }
 
 impl<K: Serialize, V: Serialize> Serialize for BTreeMap<K, V> {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, context: &Context) {
         serializer.write_map_def(self.len());
         self.iter().for_each(|(k, v)| {
-            k.serialize(serializer);
-            v.serialize(serializer);
+            k.serialize(serializer, context);
+            v.serialize(serializer, context);
         });
     }
 }
 
 impl Serialize for Vec<u8> {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_bytes(self.as_slice());
     }
 }
 
 impl Serialize for &[u8] {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_bytes(self);
     }
 }
 
 impl Serialize for String {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_text(self.as_str());
     }
 }
 
 impl Serialize for &str {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_text(self);
     }
 }
 
 impl<T: Serialize> Serialize for Option<T> {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, context: &Context) {
         match self {
-            Some(val) => val.serialize(serializer),
+            Some(val) => val.serialize(serializer, context),
             None => (),
         }
     }
 }
 
 impl<T: Serialize> Serialize for Arc<T> {
-    fn serialize(&self, serializer: &mut Serializer) {
-        self.as_ref().serialize(serializer)
+    fn serialize(&self, serializer: &mut Serializer, context: &Context) {
+        self.as_ref().serialize(serializer, context)
     }
 }
 
 impl<T: Serialize> Serialize for Rc<T> {
-    fn serialize(&self, serializer: &mut Serializer) {
-        self.as_ref().serialize(serializer)
+    fn serialize(&self, serializer: &mut Serializer, context: &Context) {
+        self.as_ref().serialize(serializer, context)
     }
 }

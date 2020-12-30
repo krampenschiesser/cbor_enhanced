@@ -1,5 +1,6 @@
 use uuid::Uuid;
 
+use crate::context::Context;
 use crate::ser::Serializer;
 use crate::types::IanaTag;
 use crate::Serialize;
@@ -12,7 +13,7 @@ impl Serializer {
 }
 
 impl Serialize for Uuid {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_uuid(self);
     }
 }

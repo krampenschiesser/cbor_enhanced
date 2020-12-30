@@ -58,19 +58,19 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
         let ty = match &f.ty {
             Type::Path(_p) => {
                 let ty = to_non_generic_type(&f.ty);
-                quote! {let (val, rem) = #ty::deserialize(deserializer, data)?;}
+                quote! {let (val, rem) = #ty::deserialize(deserializer, data, context)?;}
             }
             Type::Reference(reference) => {
                 if let Some(token) = get_special_slice_token(reference) {
                     token
                 } else {
                     let ty = to_non_generic_type(&f.ty);
-                    quote! {let (val, rem) = #ty::deserialize(deserializer, data)?;}
+                    quote! {let (val, rem) = #ty::deserialize(deserializer, data, context)?;}
                 }
             }
             _ => {
                 let ty = &f.ty;
-                quote! {let (val, rem) = #ty::deserialize(deserializer, data)?;}
+                quote! {let (val, rem) = #ty::deserialize(deserializer, data, context)?;}
             }
         };
         let ty = if ty_string == "Vec<u8>" {
@@ -160,7 +160,7 @@ pub(crate) fn generate_deserialize(input: &syn::DeriveInput) -> TokenStream {
 
     let q = quote! {
         impl#main_generics cbor_enhanced::Deserialize#trait_generics for #identifier #type_generic #where_clause  {
-            fn deserialize(deserializer: &mut cbor_enhanced::Deserializer, data: &#lifetime [u8]) -> Result<(Self, &#lifetime [u8]), cbor_enhanced::CborError> {
+            fn deserialize(deserializer: &mut cbor_enhanced::Deserializer, data: &#lifetime [u8], context: &cbor_enhanced::Context) -> Result<(Self, &#lifetime [u8]), cbor_enhanced::CborError> {
                 #(#declarations)*
 
                 let mut found_ids: Vec<u64> = Vec::new();

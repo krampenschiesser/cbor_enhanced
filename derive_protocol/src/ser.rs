@@ -20,7 +20,7 @@ pub(crate) fn generate_serialize(input: &syn::DeriveInput) -> TokenStream {
     let (impl_generic, type_generic, where_clause) = generics.split_for_impl();
     quote! {
         impl#impl_generic cbor_enhanced::Serialize for #identifier#type_generic #where_clause {
-            fn serialize(&self, serializer: &mut cbor_enhanced::Serializer) {
+            fn serialize(&self, serializer: &mut cbor_enhanced::Serializer, context: &cbor_enhanced::Context) {
                 #length_token
 
                 #(#serialized_fields)*
@@ -231,26 +231,26 @@ fn serialize_fields(
                     quote! {
                         if #identifier != #tokens {
                             serializer.write_u64(#id_literal);
-                            #identifier.serialize(serializer);
+                            #identifier.serialize(serializer, context);
                         }
                     }
                 } else {
                     quote! {
                         if self.#identifier != #tokens {
                             serializer.write_u64(#id_literal);
-                            self.#identifier.serialize(serializer);
+                            self.#identifier.serialize(serializer, context);
                         }
                     }
                 }
             } else if is_enum {
                 quote! {
                     serializer.write_u64(#id_literal);
-                    #identifier.serialize(serializer);
+                    #identifier.serialize(serializer, context);
                 }
             } else {
                 quote! {
                     serializer.write_u64(#id_literal);
-                    self.#identifier.serialize(serializer);
+                    self.#identifier.serialize(serializer, context);
                 }
             }
         })

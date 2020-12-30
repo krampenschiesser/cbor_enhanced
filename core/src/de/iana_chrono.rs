@@ -1,6 +1,7 @@
 use chrono::{DateTime, FixedOffset, Offset, TimeZone, Timelike, Utc};
 use nom::number::complete::be_u8;
 
+use crate::context::Context;
 use crate::de::{Deserializer, Remaining};
 use crate::error::CborError;
 use crate::types::{IanaTag, Type};
@@ -136,6 +137,7 @@ impl<'de> Deserialize<'de> for DateTime<FixedOffset> {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        __context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
         deserializer
             .take_timestamp(data)

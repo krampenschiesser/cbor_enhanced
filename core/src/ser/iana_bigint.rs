@@ -1,6 +1,7 @@
 use num_bigint::{BigInt, BigUint};
 use num_traits::Signed;
 
+use crate::context::Context;
 use crate::ser::Serializer;
 use crate::types::IanaTag;
 use crate::Serialize;
@@ -22,12 +23,12 @@ impl Serializer {
 }
 
 impl Serialize for BigUint {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_biguint(self);
     }
 }
 impl Serialize for BigInt {
-    fn serialize(&self, serializer: &mut Serializer) {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
         serializer.write_bigint(self);
     }
 }

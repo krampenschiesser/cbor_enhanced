@@ -135,7 +135,8 @@ mod derive_main {
         assert_eq!(bytes, vec.as_slice());
         let mut deserializer = Deserializer::new();
 
-        let (val, _) = T::deserialize(&mut deserializer, bytes).expect("Deserialization failed!");
+        let (val, _) = T::deserialize(&mut deserializer, bytes, &Context::new())
+            .expect("Deserialization failed!");
         assert_eq!(&val, t);
     }
 }

@@ -1,5 +1,6 @@
 use uuid::Uuid;
 
+use crate::context::Context;
 use crate::de::{Deserializer, Remaining};
 use crate::error::CborError;
 use crate::types::IanaTag;
@@ -18,6 +19,7 @@ impl<'de> Deserialize<'de> for Uuid {
     fn deserialize(
         deserializer: &mut Deserializer,
         data: &'de [u8],
+        _context: &Context,
     ) -> Result<(Self, &'de [u8]), CborError> {
         deserializer
             .take_uuid(data)
