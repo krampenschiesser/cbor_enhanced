@@ -47,6 +47,8 @@ pub enum CborError {
     ExpectArray(Type),
     #[error("Expected map but got: {:?}", _0)]
     ExpectMap(Type),
+    #[error("Expected tag but got: {:?}", _0)]
+    ExpectTag(Type),
     #[error("Expected tags {:?} but got tag: {:?}", _1, _0)]
     InvalidTags(IanaTag, &'static [IanaTag]),
     #[error("Expected tag {:?} but got tag: {:?}", _1, _0)]
@@ -93,6 +95,8 @@ pub enum CborError {
     InfiniteNotSupported,
     #[error("No value found for {}", _0)]
     NoValueFound(&'static str),
+    #[error("Custom error: {}", _0)]
+    Custom(String),
 }
 
 impl nom::error::ParseError<&[u8]> for CborError {
@@ -118,5 +122,18 @@ impl From<nom::Err<CborError>> for CborError {
 impl From<Utf8Error> for CborError {
     fn from(e: Utf8Error) -> Self {
         CborError::InvalidUtf8(e)
+    }
+}
+#[cfg(feature = "use_serde")]
+impl serde::de::Error for CborError {
+    fn custom<T: std::fmt::Display>(desc: T) -> CborError {
+        CborError::Custom(desc.to_string()).into()
+    }
+}
+
+#[cfg(feature = "use_serde")]
+impl serde::ser::Error for CborError {
+    fn custom<T: std::fmt::Display>(msg: T) -> Self {
+        CborError::Custom(msg.to_string()).into()
     }
 }

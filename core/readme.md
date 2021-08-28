@@ -49,6 +49,12 @@ struct BlaStruct {
 }
 ```
 
+## Serde
+
+```rust
+
+```
+
 ## License
 
 MIT and Apache

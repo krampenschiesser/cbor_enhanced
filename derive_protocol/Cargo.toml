@@ -13,6 +13,6 @@ documentation = "https://docs.rs/cbor_enhanced"
 proc-macro = true
 
 [dependencies]
-syn = "1.0.55"
-quote = "1.0.8"
-proc-macro2 = "1.0.24"
+syn = "1.0.74"
+quote = "1.0.9"
+proc-macro2 = "1.0.28"

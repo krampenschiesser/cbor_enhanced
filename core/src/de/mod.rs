@@ -55,10 +55,7 @@ where
     ) -> Result<(Self, &'de [u8]), CborError>;
 }
 
-pub struct Deserializer {
-    //#[cfg(feature = "iana_string_ref")]
-//string_references: Vec<Vec<&str>>
-}
+pub struct Deserializer {}
 impl Default for Deserializer {
     fn default() -> Self {
         Deserializer::new()
@@ -69,7 +66,7 @@ impl<'de> Deserializer {
         Self {}
     }
 
-    fn take_type(
+    pub fn take_type(
         &self,
         data: &'de [u8],
         skip_tags: bool,
@@ -267,7 +264,7 @@ impl<'de> Deserializer {
         let (cbor_type, data) = self.take_type(data, false)?;
         let (data, o) = match cbor_type {
             Type::Tag(int) => int.take_value(data),
-            _ => Err(CborError::ExpectMap(cbor_type)),
+            _ => Err(CborError::ExpectTag(cbor_type)),
         }?;
         Ok((IanaTag::from_tag(o), data))
     }

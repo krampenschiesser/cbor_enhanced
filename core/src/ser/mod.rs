@@ -27,6 +27,9 @@ mod iana_regex;
 mod iana_std;
 #[cfg(feature = "iana_uuid")]
 mod iana_uuid;
+mod serialize_primitive_seq;
+
+use serialize_primitive_seq::SerializePrimitiveSeq;
 
 pub trait Serialize
 where
@@ -36,7 +39,9 @@ where
 }
 
 pub struct Serializer {
-    bytes: BytesMut,
+    pub bytes: BytesMut,
+    seq_serializer: Option<SerializePrimitiveSeq>,
+    seq_serializer_stack: Vec<SerializePrimitiveSeq>,
 }
 
 impl AsRef<[u8]> for Serializer {
@@ -54,10 +59,16 @@ impl Serializer {
     pub fn new() -> Self {
         Serializer {
             bytes: BytesMut::new(),
+            seq_serializer: None,
+            seq_serializer_stack: Vec::new(),
         }
     }
     pub fn with_bytes(bytes: BytesMut) -> Self {
-        Self { bytes }
+        Self {
+            bytes,
+            seq_serializer: None,
+            seq_serializer_stack: Vec::new(),
+        }
     }
     pub fn reset(&mut self) {
         self.bytes.clear();
@@ -82,10 +93,18 @@ impl Serializer {
         self.bytes.put_slice(text.as_bytes());
     }
     pub fn write_u64(&mut self, value: u64) {
+        if let Some(seq_serializer) = &mut self.seq_serializer {
+            seq_serializer.write_u64(value);
+        }
         self.write_u64_internal(value, 0u8);
     }
 
     fn write_u64_internal(&mut self, value: u64, mask: u8) {
+        let bytes = if let Some(seq_serializer) = &mut self.seq_serializer {
+            &mut seq_serializer.bytes_buffer
+        } else {
+            &mut self.bytes
+        };
         let slice: [u8; 8] = value.to_be_bytes();
         let option = slice
             .iter()
@@ -93,38 +112,71 @@ impl Serializer {
             .find(|(_, b)| **b > 0u8)
             .map(|(pos, _)| pos);
         if value <= (MAX_INLINE_ENCODING as u64) {
-            self.bytes.reserve(1);
-            self.bytes.put_u8(mask | value as u8)
+            bytes.reserve(1);
+            bytes.put_u8(mask | value as u8)
         } else if let Some(len) = option {
             if len == 7 {
-                self.bytes.reserve(2);
-                self.bytes.put_u8(mask | 24);
-                self.bytes.put_u8(slice[7]);
+                bytes.reserve(2);
+                bytes.put_u8(mask | 24);
+                bytes.put_u8(slice[7]);
             } else if len >= 6 {
-                self.bytes.reserve(3);
-                self.bytes.put_u8(mask | 25);
-                self.bytes.put_u8(slice[6]);
-                self.bytes.put_u8(slice[7]);
+                bytes.reserve(3);
+                bytes.put_u8(mask | 25);
+                bytes.put_u8(slice[6]);
+                bytes.put_u8(slice[7]);
             } else if len >= 4 {
-                self.bytes.reserve(5);
-                self.bytes.put_u8(mask | 26);
-                self.bytes.put_u8(slice[4]);
-                self.bytes.put_u8(slice[5]);
-                self.bytes.put_u8(slice[6]);
-                self.bytes.put_u8(slice[7]);
+                bytes.reserve(5);
+                bytes.put_u8(mask | 26);
+                bytes.put_u8(slice[4]);
+                bytes.put_u8(slice[5]);
+                bytes.put_u8(slice[6]);
+                bytes.put_u8(slice[7]);
             } else {
-                self.bytes.reserve(9);
-                self.bytes.put_u8(mask | 27);
-                self.bytes.put_u64(value);
+                bytes.reserve(9);
+                bytes.put_u8(mask | 27);
+                bytes.put_u64(value);
             }
         } else {
-            self.bytes.reserve(9);
-            self.bytes.put_u8(mask | 27);
-            self.bytes.put_u64(value);
+            bytes.reserve(9);
+            bytes.put_u8(mask | 27);
+            bytes.put_u64(value);
         }
     }
     pub fn write_u8(&mut self, value: u8) {
-        self.write_u64(value as u64)
+        if let Some(seq_serializer) = &mut self.seq_serializer {
+            seq_serializer.write_u8(value);
+        }
+        self.write_u64_internal(value as u64, 0u8);
+    }
+    pub fn write_u16(&mut self, value: u16) {
+        if let Some(seq_serializer) = &mut self.seq_serializer {
+            seq_serializer.write_u16(value);
+        }
+        self.write_u64_internal(value as u64, 0u8);
+    }
+    pub fn write_u32(&mut self, value: u32) {
+        if let Some(seq_serializer) = &mut self.seq_serializer {
+            seq_serializer.write_u32(value);
+        }
+        self.write_u64_internal(value as u64, 0u8);
+    }
+    pub fn write_i8(&mut self, value: i8) {
+        if let Some(seq_serializer) = &mut self.seq_serializer {
+            seq_serializer.write_i8(value);
+        }
+        self.write_u64_internal(value as u64, 0u8);
+    }
+    pub fn write_i16(&mut self, value: i16) {
+        if let Some(seq_serializer) = &mut self.seq_serializer {
+            seq_serializer.write_i16(value);
+        }
+        self.write_u64_internal(value as u64, 0u8);
+    }
+    pub fn write_i32(&mut self, value: i32) {
+        if let Some(seq_serializer) = &mut self.seq_serializer {
+            seq_serializer.write_i32(value);
+        }
+        self.write_u64_internal(value as u64, 0u8);
     }
     pub fn write_i64(&mut self, value: i128) {
         if value >= 0 {
@@ -134,25 +186,39 @@ impl Serializer {
                 value as u64
             };
             self.write_u64(value);
-            return;
-        }
-
-        let value = if (value + 1).abs() > u64::max_value() as i128 {
-            u64::max_value()
         } else {
-            (value + 1).abs() as u64
-        };
-        self.write_u64_internal(value, 0b0010_0000);
+            if let Some(seq_serializer) = &mut self.seq_serializer {
+                seq_serializer.write_i64(value as i64);
+            }
+            let value = if (value + 1).abs() > u64::max_value() as i128 {
+                u64::max_value()
+            } else {
+                (value + 1).abs() as u64
+            };
+            self.write_u64_internal(value, 0b0010_0000);
+        }
     }
     pub fn write_f64(&mut self, value: f64) {
-        self.bytes.reserve(9);
-        self.bytes.put_u8(0b1110_0000 | 27u8);
-        self.bytes.put_f64(value);
+        let bytes = if let Some(seq_serializer) = &mut self.seq_serializer {
+            seq_serializer.write_f64(value);
+            &mut seq_serializer.bytes_buffer
+        } else {
+            &mut self.bytes
+        };
+        bytes.reserve(9);
+        bytes.put_u8(0b1110_0000 | 27u8);
+        bytes.put_f64(value);
     }
     pub fn write_f32(&mut self, value: f32) {
-        self.bytes.reserve(5);
-        self.bytes.put_u8(0b1110_0000 | 26u8);
-        self.bytes.put_f32(value);
+        let bytes = if let Some(seq_serializer) = &mut self.seq_serializer {
+            seq_serializer.write_f32(value);
+            &mut seq_serializer.bytes_buffer
+        } else {
+            &mut self.bytes
+        };
+        bytes.reserve(5);
+        bytes.put_u8(0b1110_0000 | 26u8);
+        bytes.put_f32(value);
     }
     #[cfg(feature = "iana_numbers")]
     pub fn write_f16(&mut self, value: f16) {
@@ -218,36 +284,110 @@ impl Serializer {
     pub fn into_bytes(self) -> BytesMut {
         self.bytes
     }
-}
 
-macro_rules! impl_pos_number {
-    ($number:ty) => {
-        impl Serialize for $number {
-            fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
-                serializer.write_u64(*self as u64);
+    pub fn start_seq(&mut self) {
+        let serializer = SerializePrimitiveSeq::new();
+        let old = self.seq_serializer.replace(serializer);
+        if let Some(old) = old {
+            self.seq_serializer_stack.push(old);
+        }
+    }
+    pub fn end_seq(&mut self) {
+        if let Some(seq_serializer) = self.seq_serializer.take() {
+            dbg!(
+                "end seq with stored array",
+                seq_serializer.bytes_buffer.clone()
+            );
+            if seq_serializer.is_same_kind() {
+                if !seq_serializer.f32array.is_empty() {
+                    self.write_f32_array(&seq_serializer.f32array);
+                }
+                if !seq_serializer.f64array.is_empty() {
+                    self.write_f64_array(&seq_serializer.f64array);
+                }
+                if !seq_serializer.u8array.is_empty() {
+                    self.write_bytes(&seq_serializer.u8array);
+                }
+                if !seq_serializer.u16array.is_empty() {
+                    self.write_u16_array(&seq_serializer.u16array);
+                }
+                if !seq_serializer.u32array.is_empty() {
+                    self.write_u32_array(&seq_serializer.u32array);
+                }
+                if !seq_serializer.u64array.is_empty() {
+                    self.write_u64_array(&seq_serializer.u64array);
+                }
+                if !seq_serializer.i8array.is_empty() {
+                    self.write_i8_array(&seq_serializer.i8array);
+                }
+                if !seq_serializer.i16array.is_empty() {
+                    self.write_i16_array(&seq_serializer.i16array);
+                }
+                if !seq_serializer.i32array.is_empty() {
+                    self.write_i32_array(&seq_serializer.i32array);
+                }
+                if !seq_serializer.i64array.is_empty() {
+                    self.write_i64_array(&seq_serializer.i64array);
+                }
+            } else {
+                dbg!(
+                    "end seq with stored array",
+                    seq_serializer.bytes_buffer.clone(),
+                    self.bytes.clone(),
+                );
+                self.bytes.put_slice(seq_serializer.bytes_buffer.as_ref());
             }
         }
-    };
-}
-macro_rules! impl_neg_number {
-    ($number:ty) => {
-        impl Serialize for $number {
-            fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
-                serializer.write_i64(*self as i128);
-            }
+        if let Some(next) = self.seq_serializer_stack.pop() {
+            self.seq_serializer = Some(next);
         }
-    };
+    }
 }
-
-impl_pos_number!(usize);
-impl_pos_number!(u64);
-impl_pos_number!(u32);
-impl_pos_number!(u16);
-impl_neg_number!(isize);
-impl_neg_number!(i8);
-impl_neg_number!(i16);
-impl_neg_number!(i32);
-impl_neg_number!(i64);
+impl Serialize for usize {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
+        serializer.write_u64(*self as u64);
+    }
+}
+impl Serialize for u64 {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
+        serializer.write_u64(*self);
+    }
+}
+impl Serialize for u32 {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
+        serializer.write_u32(*self);
+    }
+}
+impl Serialize for u16 {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
+        serializer.write_u16(*self);
+    }
+}
+impl Serialize for isize {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
+        serializer.write_i64(*self as i128);
+    }
+}
+impl Serialize for i8 {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
+        serializer.write_i8(*self);
+    }
+}
+impl Serialize for i16 {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
+        serializer.write_i16(*self);
+    }
+}
+impl Serialize for i32 {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
+        serializer.write_i32(*self);
+    }
+}
+impl Serialize for i64 {
+    fn serialize(&self, serializer: &mut Serializer, _context: &Context) {
+        serializer.write_i64(*self as i128);
+    }
+}
 
 impl Serialize for f32 {
     fn serialize(&self, serializer: &mut Serializer, _context: &Context) {

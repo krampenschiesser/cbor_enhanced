@@ -8,6 +8,7 @@ use crate::de::Remaining;
 use crate::error::CborError;
 
 mod iana_tag;
+pub use iana_tag::{IanaTag, ALL_ARRAY_TAGS};
 
 pub const MAX_INLINE_ENCODING: u8 = 23;
 

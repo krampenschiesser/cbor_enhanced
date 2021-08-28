@@ -1,2 +1,2 @@
 [workspace]
-members = ["core","derive_protocol"]
+members = ["core","derive_protocol","serde_support"]
